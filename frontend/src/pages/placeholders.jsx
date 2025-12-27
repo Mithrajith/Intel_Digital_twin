@@ -1,0 +1,11 @@
+import React from 'react';
+export const Home = () => <div className="text-2xl font-bold">Home Page</div>;
+export const Overview = () => <div className="text-2xl font-bold">Machine Overview</div>;
+export const Dashboard = () => <div className="text-2xl font-bold">Live Monitoring Dashboard</div>;
+export const Predictions = () => <div className="text-2xl font-bold">AI Prediction & Health</div>;
+export const Simulation = () => <div className="text-2xl font-bold">Digital Twin Simulation</div>;
+export const ControlPanel = () => <div className="text-2xl font-bold">Control Panel</div>;
+export const Logs = () => <div className="text-2xl font-bold">Logs & Data Export</div>;
+export const Alerts = () => <div className="text-2xl font-bold">Alerts</div>;
+export const ModelInfo = () => <div className="text-2xl font-bold">Model & System Info</div>;
+export const Settings = () => <div className="text-2xl font-bold">Settings</div>;
