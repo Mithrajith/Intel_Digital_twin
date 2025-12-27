@@ -38,7 +38,6 @@ The platform focuses on predictive maintenance for machines like robotic arms an
 
 **Multi-Machine Support**: Extend beyond single machine types (e.g., support for CNC machines).
 
-
 ## Intel Technologies Used
 
 "Intel" here refers to intelligent technologies (AI/ML and simulation tools) for building smart systems. The following are the key tools and technologies employed:
