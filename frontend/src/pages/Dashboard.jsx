@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, Pause, Activity, Zap, Thermometer, Wifi } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Pause, Activity, Zap, Thermometer, Wifi, Server } from 'lucide-react';
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { MetricCard } from '../components/common/MetricCard';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
@@ -12,7 +12,38 @@ function cn(...inputs) {
 
 export function Dashboard() {
     const [isPlaying, setIsPlaying] = useState(true);
-    const data = useSimulatedSensor(isPlaying, 1000);
+    const [machines, setMachines] = useState([]);
+    const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
+    
+    const data = useSimulatedSensor(isPlaying, 1000, selectedMachineId);
+
+    useEffect(() => {
+        // Fetch available machines from backend
+        const fetchMachines = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/machines');
+                if (response.ok) {
+                    const machineList = await response.json();
+                    setMachines(machineList);
+                } else {
+                    // Fallback if backend is offline
+                    setMachines([
+                        { id: 'robot_01', type: 'robotic_arm' },
+                        { id: 'cnc_01', type: 'cnc_milling' },
+                        { id: 'conveyor_01', type: 'conveyor_belt' }
+                    ]);
+                }
+            } catch (error) {
+                console.warn("Could not fetch machines, using defaults", error);
+                setMachines([
+                    { id: 'robot_01', type: 'robotic_arm' },
+                    { id: 'cnc_01', type: 'cnc_milling' },
+                    { id: 'conveyor_01', type: 'conveyor_belt' }
+                ]);
+            }
+        };
+        fetchMachines();
+    }, []);
 
     const [visibleSensors, setVisibleSensors] = useState({
         jointAngle: true,
@@ -32,12 +63,27 @@ export function Dashboard() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Live Condition Monitoring</h1>
-                    <p className="text-muted-foreground mt-1">Real-time sensor telemetry from Joint #3</p>
+                    <p className="text-muted-foreground mt-1">Real-time sensor telemetry from {selectedMachineId}</p>
                 </div>
                 <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-md border border-border">
+                        <Server className="h-4 w-4 ml-2 text-muted-foreground" />
+                        <select 
+                            value={selectedMachineId}
+                            onChange={(e) => setSelectedMachineId(e.target.value)}
+                            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8"
+                        >
+                            {machines.map(m => (
+                                <option key={m.id} value={m.id}>
+                                    {m.id.toUpperCase()} ({m.type.replace('_', ' ')})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <button
                         onClick={() => setIsPlaying(!isPlaying)}
                         className={cn(

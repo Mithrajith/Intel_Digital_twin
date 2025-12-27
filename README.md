@@ -15,7 +15,6 @@ The platform focuses on predictive maintenance for machines like robotic arms an
 - **Data Handling**: CSV/JSON export, feature engineering, and exploratory data analysis (notebooks across folders).
 - **Hybrid Modeling**: Python package for digital twins with physics-based and ML components (in `Digital-Twin-in-python/`).
 - **Visualization**: Charts and plots using Plotly, Matplotlib, and Recharts.
-- **Basic Apps**: Streamlit app for industrial equipment prediction (in `Predictive-Maintenance-for-Industrial-Equipment/`).
 
 ## What Needs to be Done
 
