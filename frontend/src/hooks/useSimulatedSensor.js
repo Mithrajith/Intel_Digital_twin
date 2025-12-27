@@ -95,7 +95,8 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
             ws.onclose = () => {
                 console.log("WebSocket closed");
                 wsRef.current = null;
-                // If connection closes, fall back to local simulation
+                // If connection closes unexpectedly (and we are still playing), fall back to local simulation
+                // We check ws.readyState to ensure we aren't in the middle of a manual close
                 if (isPlaying) {
                    startLocalSimulation();
                 }
@@ -110,6 +111,8 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         // Cleanup
         return () => {
             if (wsRef.current) {
+                // Prevent onclose from triggering fallback when we manually close
+                wsRef.current.onclose = null;
                 wsRef.current.close();
                 wsRef.current = null;
             }

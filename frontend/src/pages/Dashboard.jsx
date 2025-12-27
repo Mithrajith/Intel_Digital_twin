@@ -11,7 +11,7 @@ function cn(...inputs) {
 }
 
 export function Dashboard() {
-    const [isPlaying, setIsPlaying] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [machines, setMachines] = useState([]);
     const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
     
@@ -69,12 +69,15 @@ export function Dashboard() {
                     <p className="text-muted-foreground mt-1">Real-time sensor telemetry from {selectedMachineId}</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-md border border-border">
-                        <Server className="h-4 w-4 ml-2 text-muted-foreground" />
+                    <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
+                        <Server className="h-4 w-4 ml-2 text-blue-500" />
                         <select 
                             value={selectedMachineId}
-                            onChange={(e) => setSelectedMachineId(e.target.value)}
-                            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8"
+                            onChange={(e) => {
+                                setSelectedMachineId(e.target.value);
+                                setIsPlaying(false); // Stop stream when changing machine
+                            }}
+                            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8 text-blue-700 font-medium"
                         >
                             {machines.map(m => (
                                 <option key={m.id} value={m.id}>
@@ -89,11 +92,11 @@ export function Dashboard() {
                         className={cn(
                             "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
                             isPlaying
-                                ? "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
+                                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                                 : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
                         )}
                     >
-                        {isPlaying ? <><Pause className="h-4 w-4" /> Pause Stream</> : <><Play className="h-4 w-4" /> Resume Stream</>}
+                        {isPlaying ? <><Pause className="h-4 w-4" /> Stop Stream</> : <><Play className="h-4 w-4" /> Start Stream</>}
                     </button>
                 </div>
             </div>
