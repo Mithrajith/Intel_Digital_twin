@@ -6,6 +6,8 @@ import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { SHAPBarChart } from '../components/charts/SHAPBarChart';
+import { useSHAPExplanation } from '../hooks/useSHAPExplanation';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -61,6 +63,20 @@ export function Dashboard() {
     const getLatestValue = (key) => {
         if (data.length === 0) return 0;
         return Number(data[data.length - 1][key]).toFixed(2);
+    };
+
+    // SHAP explainability
+    const { shap, loading: shapLoading, error: shapError, fetchSHAP } = useSHAPExplanation();
+
+    // Prepare latest features for SHAP (use the last data point)
+    const latestData = data[data.length - 1] || {};
+    const handleExplain = () => {
+        // Only send numeric features
+        const features = {};
+        Object.entries(latestData).forEach(([k, v]) => {
+            if (typeof v === 'number' && !isNaN(v)) features[k] = v;
+        });
+        if (Object.keys(features).length > 0) fetchSHAP(features);
     };
 
     return (
@@ -131,6 +147,28 @@ export function Dashboard() {
                 />
             </div>
 
+            {/* ML Predictions Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+                <MetricCard
+                    title="Anomaly Score"
+                    value={getLatestValue('anomaly_score')}
+                    unit=""
+                    status={Number(getLatestValue('anomaly_score')) > 0.7 ? 'warning' : 'neutral'}
+                />
+                <MetricCard
+                    title="Failure Probability"
+                    value={getLatestValue('failure_probability')}
+                    unit=""
+                    status={Number(getLatestValue('failure_probability')) > 0.5 ? 'error' : 'neutral'}
+                />
+                <MetricCard
+                    title="Remaining Useful Life"
+                    value={getLatestValue('rul_hours')}
+                    unit="hrs"
+                    status={Number(getLatestValue('rul_hours')) < 50 ? 'warning' : 'neutral'}
+                />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {visibleSensors.jointAngle && (
                     <TimeSeriesChart
@@ -187,6 +225,25 @@ export function Dashboard() {
                         {key.charAt(0).toUpperCase() + key.slice(1)}
                     </label>
                 ))}
+            </div>
+
+            {/* SHAP Explainability Panel */}
+            <div className="my-6">
+                <button
+                    onClick={handleExplain}
+                    className="mb-2 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium"
+                    disabled={shapLoading}
+                >
+                    {shapLoading ? 'Explaining...' : 'Explain Latest Prediction'}
+                </button>
+                {shapError && <div className="text-red-500 text-xs mb-2">{shapError}</div>}
+                {shap && shap.shap_values && shap.feature_names && (
+                    <SHAPBarChart
+                        shapValues={shap.shap_values[0]}
+                        featureNames={shap.feature_names}
+                        baseValue={Array.isArray(shap.base_value) ? shap.base_value[1] : shap.base_value}
+                    />
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 """FastAPI application for Technovate Digital Twin backend."""
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
@@ -435,25 +435,67 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
             joint_states = state.simulator.get_joint_states()
             sensor_data = state.sensor_gen.generate()
             
+
             # Format data for frontend (flat structure)
             data = {
                 "timestamp": time.time(),
                 "machine_id": machine_id,
                 "status": "running" if state.is_running else "stopped",
             }
-            
+
             # Add joint data in flat format
             for i, js in enumerate(joint_states, 1):
                 data[f"joint_{i}_angle"] = js.angle * (180 / math.pi)  # Degrees
                 data[f"joint_{i}_velocity"] = js.velocity
                 data[f"joint_{i}_torque"] = js.torque
                 data[f"joint_{i}_temperature"] = sensor_data.joint_temperatures.get(js.name, 25.0)
-            
+
             # Add aggregate metrics
             data["temperature_core"] = sum(sensor_data.joint_temperatures.values()) / len(sensor_data.joint_temperatures)
             data["vibration_level"] = sensor_data.overall_vibration
             data["power_consumption"] = sensor_data.power_consumption
-            
+
+            # --- Real-time ML inference integration ---
+            # Prepare features for ML models
+            features_for_eng = {
+                "temperature_core": data["temperature_core"],
+                "vibration_level": data["vibration_level"],
+                "power_consumption": data["power_consumption"],
+            }
+            # Add joint_1_angle as a feature if available
+            if "joint_1_angle" in data:
+                features_for_eng["joint_1_angle"] = data["joint_1_angle"]
+
+            # Add sample to rolling buffer
+            state.feature_eng.add_sample(features_for_eng)
+            # Extract features for ML
+            ml_features = state.feature_eng.extract_features(features_for_eng)
+
+            # Convert features to numpy array for model input
+            import numpy as np
+            feature_vector = np.array([v for v in ml_features.values()], dtype=np.float32).reshape(1, -1)
+
+            # Run ML models (with error handling)
+            try:
+                anomaly_score = float(state.anomaly_detector.predict(feature_vector))
+            except Exception as e:
+                anomaly_score = 0.0
+            try:
+                failure_prob = float(state.failure_predictor.predict_proba(feature_vector)[0][1])
+            except Exception as e:
+                failure_prob = 0.0
+            try:
+                rul_hours = float(state.rul_estimator.predict(feature_vector)[0])
+            except Exception as e:
+                rul_hours = 0.0
+
+            data["anomaly_score"] = anomaly_score
+            data["failure_probability"] = failure_prob
+            data["rul_hours"] = rul_hours
+
+            # Debug: print outgoing data for troubleshooting
+            print('WebSocket send:', data)
+
             # Send data
             await websocket.send_json(data)
             
@@ -468,6 +510,22 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
             await websocket.close()
         except:
             pass
+
+
+# SHAP explainability endpoint (must be after app = FastAPI(...))
+@app.post("/explain/failure")
+async def explain_failure(features: dict = Body(...)):
+    """
+    Return SHAP values for the failure predictor given input features.
+    Expects a dict of features (same as used for ML inference).
+    """
+    import numpy as np
+    # Convert features to numpy array
+    feature_vector = np.array([v for v in features.values()], dtype=np.float32).reshape(1, -1)
+    # Optionally pass feature names for UI
+    feature_names = list(features.keys())
+    shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
+    return shap_result
 
 
 if __name__ == "__main__":

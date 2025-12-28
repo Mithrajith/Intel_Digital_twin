@@ -12,6 +12,27 @@ from ..config import settings
 
 class FailurePredictor:
     """XGBoost-based failure predictor."""
+
+    def shap_explain(self, X: np.ndarray, feature_names=None):
+        """
+        Compute SHAP values for the input features.
+        Args:
+            X: Feature vector (n_features,) or matrix (n_samples, n_features)
+            feature_names: Optional list of feature names
+        Returns:
+            SHAP values and base value
+        """
+        import shap
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+        explainer = shap.TreeExplainer(self.model)
+        shap_values = explainer.shap_values(X)
+        base_value = explainer.expected_value
+        return {
+            "shap_values": shap_values.tolist(),
+            "base_value": base_value.tolist() if hasattr(base_value, 'tolist') else base_value,
+            "feature_names": feature_names if feature_names else None
+        }
     
     def __init__(self):
         """Initialize failure predictor."""
