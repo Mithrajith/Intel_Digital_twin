@@ -43,17 +43,29 @@ async def list_machines():
     return get_all_machines()
 
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
+import os
+
+# Define paths dynamically
+BASE_DIR = Path(__file__).resolve().parent
+# Go up one level to Backend, then down to the target
+PROJECT_ROOT = BASE_DIR.parent 
+MESHES_DIR = PROJECT_ROOT / "digital_twin_robot" / "pole_project" / "create_multibody_from_urdf" / "armpi_fpv" / "meshes"
+URDF_FILE = PROJECT_ROOT / "digital_twin_robot" / "pole_project" / "create_multibody_from_urdf" / "armpi_fpv" / "armpi_fpv.urdf"
 
 # Mount static files for meshes
-app.mount("/meshes", StaticFiles(directory="/home/zypher/PROJECT/Intel_Digital_twin/Backend/digital_twin_robot/pole_project/create_multibody_from_urdf/armpi_fpv/meshes"), name="meshes")
-
-from fastapi.responses import FileResponse
+if MESHES_DIR.exists():
+    app.mount("/meshes", StaticFiles(directory=str(MESHES_DIR)), name="meshes")
+else:
+    print(f"Warning: Meshes directory not found at {MESHES_DIR}")
 
 @app.get("/urdf")
 async def get_urdf():
     """Serve the URDF file directly."""
-    urdf_path = "/home/zypher/PROJECT/Intel_Digital_twin/Backend/digital_twin_robot/pole_project/create_multibody_from_urdf/armpi_fpv/armpi_fpv.urdf"
-    return FileResponse(urdf_path, media_type='application/xml')
+    if not URDF_FILE.exists():
+        raise HTTPException(status_code=404, detail="URDF file not found")
+    return FileResponse(str(URDF_FILE), media_type='application/xml')
 
 @app.get("/machines/{machine_id}/data")
 async def read_machine_data(machine_id: str):

@@ -15,12 +15,18 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         }
 
         let intervalId = null;
+        let isActive = true;
 
         // Local simulation function
         const startLocalSimulation = () => {
+             if (!isActive) return;
              if (intervalId) clearInterval(intervalId);
 
              intervalId = setInterval(() => {
+                if (!isActive) {
+                    clearInterval(intervalId);
+                    return;
+                }
                 timeRef.current += 1;
 
                 const newDataPoint = {
@@ -54,11 +60,16 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
             const ws = new WebSocket(`ws://localhost:8000/ws/machines/${machineId}`);
 
             ws.onopen = () => {
+                if (!isActive) {
+                    ws.close();
+                    return;
+                }
                 console.log(`Connected to ${machineId} stream`);
                 if (intervalId) clearInterval(intervalId); // Stop local sim if connected
             };
 
             ws.onmessage = (event) => {
+                if (!isActive) return;
                 try {
                     const rawData = JSON.parse(event.data);
                     
@@ -87,12 +98,14 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
             };
 
             ws.onerror = (error) => {
+                if (!isActive) return;
                 console.warn("WebSocket error, falling back to local simulation");
                 // Don't close here, let onclose handle it or just start local sim
                 startLocalSimulation();
             };
 
             ws.onclose = () => {
+                if (!isActive) return;
                 console.log("WebSocket closed");
                 wsRef.current = null;
                 // If connection closes unexpectedly (and we are still playing), fall back to local simulation
@@ -110,6 +123,7 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
 
         // Cleanup
         return () => {
+            isActive = false;
             if (wsRef.current) {
                 // Prevent onclose from triggering fallback when we manually close
                 wsRef.current.onclose = null;

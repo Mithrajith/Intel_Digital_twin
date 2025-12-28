@@ -51,7 +51,12 @@ async def lifespan(app: FastAPI):
     print("Starting Technovate Digital Twin Backend...")
     
     # Copy URDF file if needed
-    urdf_source = Path("/home/zypher/PROJECT/Intel_Digital_twin/Backend/digital_twin_robot/robot_digital_twin/3d_model_urdf_files/armpi_fpv.urdf")
+    # Dynamic path resolution
+    BASE_DIR = Path(__file__).resolve().parent
+    # Go up 3 levels: app -> technovate_backend -> Backend
+    PROJECT_ROOT = BASE_DIR.parent.parent.parent
+    urdf_source = PROJECT_ROOT / "digital_twin_robot" / "robot_digital_twin" / "3d_model_urdf_files" / "armpi_fpv.urdf"
+    
     if urdf_source.exists() and not settings.urdf_path.exists():
         import shutil
         settings.urdf_path.parent.mkdir(parents=True, exist_ok=True)
