@@ -9,7 +9,7 @@ export function Home() {
             {/* Hero Section */}
             <section className="flex flex-col items-center text-center space-y-6 py-12">
                 <Badge variant="info" className="mb-2">v1.0.0 Stable</Badge>
-                <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl">
+                <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
                     Technovate <span className="text-primary">Digital Twin</span>
                 </h1>
                 <p className="max-w-2xl text-lg text-muted-foreground">
