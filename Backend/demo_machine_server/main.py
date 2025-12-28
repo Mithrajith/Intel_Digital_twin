@@ -42,6 +42,19 @@ async def list_machines():
     """List all available simulated machines."""
     return get_all_machines()
 
+from fastapi.staticfiles import StaticFiles
+
+# Mount static files for meshes
+app.mount("/meshes", StaticFiles(directory="/home/zypher/PROJECT/Intel_Digital_twin/Backend/digital_twin_robot/pole_project/create_multibody_from_urdf/armpi_fpv/meshes"), name="meshes")
+
+from fastapi.responses import FileResponse
+
+@app.get("/urdf")
+async def get_urdf():
+    """Serve the URDF file directly."""
+    urdf_path = "/home/zypher/PROJECT/Intel_Digital_twin/Backend/digital_twin_robot/pole_project/create_multibody_from_urdf/armpi_fpv/armpi_fpv.urdf"
+    return FileResponse(urdf_path, media_type='application/xml')
+
 @app.get("/machines/{machine_id}/data")
 async def read_machine_data(machine_id: str):
     """Get a single snapshot of machine data."""
