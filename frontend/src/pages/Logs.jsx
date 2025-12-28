@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, Search, Filter, RefreshCw } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
@@ -103,6 +104,88 @@ export function Logs() {
         setStartDate('');
         setEndDate('');
     };
+=======
+import React, { useState } from 'react';
+import { FileText, Download, Calendar, Search, Filter, X } from 'lucide-react';
+import { Badge } from '../components/common/Badge';
+
+export function Logs() {
+    const [showDateRange, setShowDateRange] = useState(false);
+    const [showTypeFilter, setShowTypeFilter] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedTypes, setSelectedTypes] = useState([]);
+
+    const logs = [
+        { id: 10423, time: '2024-05-20 14:32:11', event: 'System Start', type: 'info', user: 'Admin' },
+        { id: 10422, time: '2024-05-20 14:30:05', event: 'Sensor Calibration', type: 'success', user: 'System' },
+        { id: 10421, time: '2024-05-20 12:15:44', event: 'Torque Spike Detected', type: 'warning', user: 'System' },
+        { id: 10420, time: '2024-05-20 10:00:00', event: 'Maintenance Mode Enabled', type: 'info', user: 'Operator 1' },
+        { id: 10419, time: '2024-05-19 18:45:22', event: 'System Shutdown', type: 'info', user: 'Admin' },
+    ];
+>>>>>>> Stashed changes
+
+    const filteredLogs = logs.filter(log => {
+        const matchesSearch = log.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            log.type.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const logDate = new Date(log.time.split(' ')[0]);
+        const matchesDateRange = (!startDate || logDate >= new Date(startDate)) &&
+                                (!endDate || logDate <= new Date(endDate));
+
+        const matchesType = selectedTypes.length === 0 || selectedTypes.includes(log.type);
+
+        return matchesSearch && matchesDateRange && matchesType;
+    });
+
+    const availableTypes = [...new Set(logs.map(log => log.type))];
+
+    const handleTypeToggle = (type) => {
+        setSelectedTypes(prev =>
+            prev.includes(type)
+                ? prev.filter(t => t !== type)
+                : [...prev, type]
+        );
+    };
+
+    const exportToCSV = () => {
+        const headers = ['ID', 'Timestamp', 'Event', 'Type', 'User'];
+        const csvContent = [
+            headers.join(','),
+            ...filteredLogs.map(log => [
+                log.id,
+                `"${log.time}"`,
+                `"${log.event}"`,
+                log.type,
+                `"${log.user}"`
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `system_logs_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const exportToJSON = () => {
+        const jsonContent = JSON.stringify(filteredLogs, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `system_logs_${new Date().toISOString().split('T')[0]}.json`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -112,6 +195,7 @@ export function Logs() {
                     <p className="text-muted-foreground mt-1">Audit trail and data export</p>
                 </div>
                 <div className="flex gap-2">
+<<<<<<< Updated upstream
                     <button 
                         onClick={fetchLogs}
                         className="flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-card hover:bg-accent transition-colors shadow-sm"
@@ -122,13 +206,24 @@ export function Logs() {
                     <button 
                         onClick={handleExportCSV}
                         className="flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-card hover:bg-accent transition-colors shadow-sm"
+=======
+                    <button
+                        onClick={exportToCSV}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md border border-border hover:bg-accent transition-colors"
+>>>>>>> Stashed changes
                     >
                         <Download className="h-4 w-4" />
                         <span>Export CSV</span>
                     </button>
+<<<<<<< Updated upstream
                     <button 
                         onClick={handleExportJSON}
                         className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+=======
+                    <button
+                        onClick={exportToJSON}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+>>>>>>> Stashed changes
                     >
                         <Download className="h-4 w-4" />
                         <span>Export JSON</span>
@@ -145,6 +240,7 @@ export function Logs() {
                         placeholder="Search logs..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+<<<<<<< Updated upstream
                         className="w-full bg-background border border-input rounded-md pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all shadow-sm"
                     />
                 </div>
@@ -194,6 +290,126 @@ export function Logs() {
                         <span>Clear</span>
                     </button>
                 )}
+=======
+                        className="w-full bg-background border border-input rounded-md pl-9 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:outline-none"
+                    />
+                </div>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowDateRange(!showDateRange)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md border border-border hover:bg-accent transition-colors"
+                    >
+                        <Calendar className="h-4 w-4" />
+                        <span>Date Range</span>
+                    </button>
+                    {showDateRange && (
+                        <div className="absolute top-full mt-2 right-0 bg-card border border-border rounded-md shadow-lg p-4 z-10 w-80">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-medium">Select Date Range</h4>
+                                <button
+                                    onClick={() => setShowDateRange(false)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">End Date</label>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:outline-none"
+                                    />
+                                </div>
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        onClick={() => {
+                                            setStartDate('');
+                                            setEndDate('');
+                                        }}
+                                        className="flex-1 px-3 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDateRange(false)}
+                                        className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowTypeFilter(!showTypeFilter)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md border border-border hover:bg-accent transition-colors"
+                    >
+                        <Filter className="h-4 w-4" />
+                        <span>Filter Type</span>
+                        {selectedTypes.length > 0 && (
+                            <span className="ml-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                                {selectedTypes.length}
+                            </span>
+                        )}
+                    </button>
+                    {showTypeFilter && (
+                        <div className="absolute top-full mt-2 right-0 bg-card border border-border rounded-md shadow-lg p-4 z-10 w-64">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-medium">Filter by Type</h4>
+                                <button
+                                    onClick={() => setShowTypeFilter(false)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {availableTypes.map(type => (
+                                    <label key={type} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTypes.includes(type)}
+                                            onChange={() => handleTypeToggle(type)}
+                                            className="rounded border-border"
+                                        />
+                                        <Badge variant={type} className="pointer-events-none">
+                                            {type.toUpperCase()}
+                                        </Badge>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="flex gap-2 pt-3 mt-3 border-t border-border">
+                                <button
+                                    onClick={() => setSelectedTypes([])}
+                                    className="flex-1 px-3 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors"
+                                >
+                                    Clear All
+                                </button>
+                                <button
+                                    onClick={() => setShowTypeFilter(false)}
+                                    className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+>>>>>>> Stashed changes
             </div>
 
             {/* Table */}
@@ -210,10 +426,20 @@ export function Logs() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
+<<<<<<< Updated upstream
                         {filteredLogs.length === 0 ? (
                             <tr>
                                 <td colSpan="6" className="px-4 py-8 text-center text-muted-foreground">
                                     No logs found.
+=======
+                        {filteredLogs.map((log) => (
+                            <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="py-3 px-4 font-mono text-muted-foreground">#{log.id}</td>
+                                <td className="py-3 px-4">{log.time}</td>
+                                <td className="py-3 px-4 font-medium">{log.event}</td>
+                                <td className="py-3 px-4">
+                                    <Badge variant={log.type}>{log.type.toUpperCase()}</Badge>
+>>>>>>> Stashed changes
                                 </td>
                             </tr>
                         ) : (

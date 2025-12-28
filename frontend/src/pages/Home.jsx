@@ -37,13 +37,13 @@ export function Home() {
                 <h2 className="text-2xl font-semibold text-center mb-12">System Architecture</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto px-4">
                     {/* Step 1 */}
-                    <div className="flex flex-col items-center text-center group">
+                    <Link to="/overview" className="flex flex-col items-center text-center group cursor-pointer">
                         <div className="h-16 w-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
                             <Activity className="h-8 w-8 text-blue-500" />
                         </div>
                         <h3 className="text-lg font-medium mb-2">Real Machine</h3>
                         <p className="text-sm text-muted-foreground">Industrial robotic arm streaming telemetry</p>
-                    </div>
+                    </Link>
 
                     {/* Connector */}
                     <div className="hidden md:flex items-center justify-center text-muted-foreground">
@@ -51,13 +51,13 @@ export function Home() {
                     </div>
 
                     {/* Step 2 */}
-                    <div className="flex flex-col items-center text-center group">
+                    <Link to="/simulation" className="flex flex-col items-center text-center group cursor-pointer">
                         <div className="h-16 w-16 rounded-full bg-purple-500/10 flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
                             <Box className="h-8 w-8 text-purple-500" />
                         </div>
                         <h3 className="text-lg font-medium mb-2">Digital Twin</h3>
                         <p className="text-sm text-muted-foreground">Real-time simulation & state mirroring</p>
-                    </div>
+                    </Link>
 
                     {/* Connector */}
                     <div className="hidden md:flex items-center justify-center text-muted-foreground">
@@ -65,13 +65,13 @@ export function Home() {
                     </div>
 
                     {/* Step 3 */}
-                    <div className="flex flex-col items-center text-center group">
+                    <Link to="/predictions" className="flex flex-col items-center text-center group cursor-pointer">
                         <div className="h-16 w-16 rounded-full bg-orange-500/10 flex items-center justify-center mb-4 group-hover:bg-orange-500/20 transition-colors">
                             <Cpu className="h-8 w-8 text-orange-500" />
                         </div>
                         <h3 className="text-lg font-medium mb-2">AI Analysis</h3>
                         <p className="text-sm text-muted-foreground">Anomaly detection & RUL prediction</p>
-                    </div>
+                    </Link>
 
                     {/* Connector */}
                     <div className="hidden md:flex items-center justify-center text-muted-foreground">
@@ -79,13 +79,13 @@ export function Home() {
                     </div>
 
                     {/* Step 4 */}
-                    <div className="flex flex-col items-center text-center group">
+                    <Link to="/alerts" className="flex flex-col items-center text-center group cursor-pointer">
                         <div className="h-16 w-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
                             <Bell className="h-8 w-8 text-red-500" />
                         </div>
                         <h3 className="text-lg font-medium mb-2">Alerts</h3>
                         <p className="text-sm text-muted-foreground">Instant notification of potential failures</p>
-                    </div>
+                    </Link>
                 </div>
             </section>
 

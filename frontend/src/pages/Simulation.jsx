@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Pause, RotateCcw, Box, Zap, Layers } from 'lucide-react';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
+import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
 export function Simulation() {
     const [isPlaying, setIsPlaying] = useState(true);
@@ -51,8 +52,12 @@ export function Simulation() {
                         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                     </button>
                     <button
+                        onClick={() => {
+                            setIsPlaying(true);
+                            setSpeed(1);
+                        }}
                         className="p-2 hover:bg-muted rounded-md transition-colors"
-                        title="Reset View"
+                        title="Refresh Simulation"
                     >
                         <RotateCcw className="h-5 w-5" />
                     </button>

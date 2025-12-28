@@ -3,6 +3,7 @@ import { Play, Pause, Activity, Zap, Thermometer, Wifi, Server } from 'lucide-re
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { MetricCard } from '../components/common/MetricCard';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
+import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -11,6 +12,7 @@ function cn(...inputs) {
 }
 
 export function Dashboard() {
+<<<<<<< Updated upstream
     const [isPlaying, setIsPlaying] = useState(false);
     const [machines, setMachines] = useState([]);
     const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
@@ -44,6 +46,11 @@ export function Dashboard() {
         };
         fetchMachines();
     }, []);
+=======
+    const [isPlaying, setIsPlaying] = useState(true);
+    const { refreshRate } = useChartRefreshRate();
+    const data = useSimulatedSensor(isPlaying, refreshRate);
+>>>>>>> Stashed changes
 
     const [visibleSensors, setVisibleSensors] = useState({
         jointAngle: true,
