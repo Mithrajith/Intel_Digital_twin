@@ -12,12 +12,12 @@ function cn(...inputs) {
 }
 
 export function Dashboard() {
-<<<<<<< Updated upstream
-    const [isPlaying, setIsPlaying] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(true);
+    const { refreshRate } = useChartRefreshRate();
     const [machines, setMachines] = useState([]);
     const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
     
-    const data = useSimulatedSensor(isPlaying, 1000, selectedMachineId);
+    const data = useSimulatedSensor(isPlaying, refreshRate, selectedMachineId);
 
     useEffect(() => {
         // Fetch available machines from backend
@@ -46,11 +46,6 @@ export function Dashboard() {
         };
         fetchMachines();
     }, []);
-=======
-    const [isPlaying, setIsPlaying] = useState(true);
-    const { refreshRate } = useChartRefreshRate();
-    const data = useSimulatedSensor(isPlaying, refreshRate);
->>>>>>> Stashed changes
 
     const [visibleSensors, setVisibleSensors] = useState({
         jointAngle: true,
