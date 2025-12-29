@@ -1,4 +1,9 @@
-import React from 'react';
+// import React from 'react';
+// import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+// import { Badge } from '../components/common/Badge';
+// import { MetricCard } from '../components/common/MetricCard';
+
+import React, { useState, useEffect } from 'react';
 import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { MetricCard } from '../components/common/MetricCard';
@@ -6,27 +11,51 @@ import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
 export function Predictions() {
-    const { refreshRate } = useChartRefreshRate();
-    const data = useSimulatedSensor(true, refreshRate);
-    
-    const latest = data.length > 0 ? data[data.length - 1] : {};
-    const failureProb = latest.failure_probability || 0;
-    const rul = latest.rul_hours || 0;
-    const anomalyScore = latest.anomaly_score || 0;
-    
-    // Calculate circle offset
-    const radius = 90;
-    const circumference = radius * 2 * Math.PI;
-    const offset = circumference * (1 - failureProb);
-    
-    const isHealthy = failureProb < 0.5 && anomalyScore < 0.7;
+    const [healthData, setHealthData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHealth = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/machine/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    setHealthData(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch health data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHealth();
+        const interval = setInterval(fetchHealth, 2000); // Poll every 2 seconds
+
+        return () => clearInterval(interval);
+    }, []);
+
+    if (loading && !healthData) {
+        return <div className="p-6 text-center text-muted-foreground">Loading prediction models...</div>;
+    }
+
+    const probabilityPercent = healthData ? (healthData.failure_probability * 100).toFixed(1) : 0;
+    const rulCycles = healthData ? Math.round(healthData.rul_hours) : 0;
+    const anomalyCount = healthData ? (healthData.anomaly_score > 0.7 ? 1 : 0) : 0;
+    const statusColor = healthData?.failure_probability > 0.5 ? "text-red-500" : "text-green-500";
+    const statusText = healthData?.failure_probability > 0.5 ? "Critical Risk Detected" : "System Normal";
+
+    // Derived values to fix ReferenceErrors
+    const isHealthy = healthData?.failure_probability < 0.5;
+    const anomalyScore = healthData?.anomaly_score || 0;
+    const radius = 84;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">AI Predictive Health</h1>
-                    <p className="text-muted-foreground mt-1">Machine Learning Analysis Model v2.4 (XGBoost + LSTM)</p>
+                    <p className="text-muted-foreground mt-1">Machine Learning Analysis Model v2.4 (XGBoost)</p>
                 </div>
                 <Badge variant={isHealthy ? "success" : "warning"} className="text-sm px-3 py-1">
                     Confidence Score: 98.2%
@@ -49,10 +78,10 @@ export function Predictions() {
                                 cy="96"
                             />
                             <circle
-                                className={failureProb > 0.5 ? "text-red-500" : "text-green-500"}
+                                className={statusColor}
                                 strokeWidth="12"
-                                strokeDasharray={circumference}
-                                strokeDashoffset={offset}
+                                strokeDasharray={90 * 2 * Math.PI}
+                                strokeDashoffset={90 * 2 * Math.PI * (1 - (healthData?.failure_probability || 0))}
                                 strokeLinecap="round"
                                 stroke="currentColor"
                                 fill="transparent"
@@ -63,15 +92,11 @@ export function Predictions() {
                             />
                         </svg>
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span className={`text-5xl font-bold ${failureProb > 0.5 ? "text-red-500" : "text-green-500"}`}>
-                                {(failureProb * 100).toFixed(1)}%
-                            </span>
+                            <span className={`text-5xl font-bold ${statusColor}`}>{probabilityPercent}%</span>
                         </div>
                     </div>
                     <p className="text-sm text-muted-foreground max-w-xs">
-                        {failureProb > 0.5 
-                            ? "High risk of failure detected. Maintenance recommended." 
-                            : "System is operating within normal parameters. No immediate risks detected."}
+                        {statusText}. Based on real-time sensor fusion analysis.
                     </p>
                 </div>
 
@@ -79,16 +104,16 @@ export function Predictions() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <MetricCard
                         title="Remaining Useful Life"
-                        value={rul.toFixed(0)}
+                        value={rulCycles}
                         unit="hours"
                         icon={ShieldCheck}
-                        status={rul < 50 ? "warning" : "success"}
+                        status={rulCycles < 50 ? "warning" : "success"}
                     />
                     <MetricCard
                         title="Anomaly Score"
-                        value={anomalyScore.toFixed(2)}
+                        value={healthData?.anomaly_score?.toFixed(3) || "0.000"}
                         icon={AlertTriangle}
-                        status={anomalyScore > 0.7 ? "error" : "success"}
+                        status={healthData?.anomaly_score > 0.7 ? "warning" : "success"}
                     />
                     <MetricCard
                         title="Model Accuracy"
@@ -105,15 +130,20 @@ export function Predictions() {
                 </div>
             </div>
 
-            {/* Component Risk Heatmap (Conceptual) */}
+            {/* Component Risk Heatmap */}
             <h3 className="text-lg font-semibold mt-8 mb-4">Component Risk Assessment</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['Joint #1', 'Joint #2', 'Joint #3', 'Hydraulic Pump', 'Control Unit', 'Sensor Array'].map((component, idx) => (
+                {Object.entries(healthData?.component_health || {}).map(([component, health]) => (
                     <div key={component} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border">
-                        <span className="font-medium">{component}</span>
-                        <Badge variant="success">Low Risk</Badge>
+                        <span className="font-medium capitalize">{component.replace('_', ' ')}</span>
+                        <Badge variant={health < 0.5 ? "destructive" : "success"}>
+                            {health < 0.5 ? "High Risk" : "Healthy"}
+                        </Badge>
                     </div>
                 ))}
+                {Object.keys(healthData?.component_health || {}).length === 0 && (
+                    <div className="p-4 text-muted-foreground">No component data available</div>
+                )}
             </div>
         </div>
     );

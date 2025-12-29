@@ -18,7 +18,7 @@ export function Dashboard() {
     const { refreshRate } = useChartRefreshRate();
     const [machines, setMachines] = useState([]);
     const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
-    
+
     const data = useSimulatedSensor(isPlaying, refreshRate, selectedMachineId);
 
     useEffect(() => {
@@ -30,8 +30,11 @@ export function Dashboard() {
                     const machineList = await response.json();
                     setMachines(machineList);
                 } else {
+<<<<<<< HEAD
                     // Fallback if backend is offline
                     console.error("Backend offline, no machines available");
+=======
+>>>>>>> b6e430f29f63a5a47913befd0fc8a8b866968457
                     setMachines([]);
                 }
             } catch (error) {
@@ -74,6 +77,17 @@ export function Dashboard() {
             };
             fetchSHAP(features);
         }
+        // Map frontend data to backend feature names
+        // Backend expects: temperature, vibration, power, velocity, torque, angle
+        const features = {
+            angle: latestData.jointAngle || 0,
+            temperature: latestData.temperature || 0,
+            vibration: latestData.vibration || 0,
+            power: latestData.torque || 0, // In useSimulatedSensor, torque is mapped from power/load
+            torque: latestData.torque || 0, // Using same value for proxy
+            velocity: 0 // Velocity not visualized in this dashboard card set
+        };
+        fetchSHAP(features);
     };
 
     return (
@@ -87,7 +101,7 @@ export function Dashboard() {
                     <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
                         <Server className="h-4 w-4 ml-2 text-blue-500" />
                         {machines.length > 0 ? (
-                            <select 
+                            <select
                                 value={selectedMachineId}
                                 onChange={(e) => {
                                     setSelectedMachineId(e.target.value);

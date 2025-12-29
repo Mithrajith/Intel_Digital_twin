@@ -17,7 +17,17 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         let intervalId = null;
         let isActive = true;
 
+<<<<<<< HEAD
         // Local simulation function removed: only backend data is used
+=======
+        // Local simulation function - DISABLED for real data only
+        const startLocalSimulation = () => {
+             if (!isActive) return;
+             if (intervalId) clearInterval(intervalId);
+             // Do nothing - no mock data
+             console.log("Waiting for real data connection...");
+        };
+>>>>>>> b6e430f29f63a5a47913befd0fc8a8b866968457
 
         // Try to connect to WebSocket
         const connectWebSocket = () => {
@@ -42,14 +52,14 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                 if (!isActive) return;
                 try {
                     const rawData = JSON.parse(event.data);
-                    
+
                     // Debug: log all incoming data
                     console.log('WebSocket data:', rawData);
-                    
+
                     // Map backend data to frontend expected format
                     // Backend: joint_1_angle, temperature_core, vibration_level, power_consumption
                     // Frontend: jointAngle, temperature, torque, vibration
-                    
+
                     const newDataPoint = {
                         time: new Date().toLocaleTimeString(),
                         jointAngle: rawData.joint_1_angle || rawData.axis_x_position || 0,

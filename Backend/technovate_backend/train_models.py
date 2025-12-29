@@ -90,6 +90,7 @@ def train_models():
     print("\nFeature Engineering...")
     feature_eng = FeatureEngineer(window_size=10)
     X, feature_names = feature_eng.create_training_dataset(data)
+    feature_eng.save() # Save the fitted scaler
     print(f"Feature matrix shape: {X.shape}")
     print(f"Features: {feature_names[:5]}... ({len(feature_names)} total)")
     
