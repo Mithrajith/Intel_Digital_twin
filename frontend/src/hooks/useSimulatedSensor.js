@@ -17,18 +17,7 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         let intervalId = null;
         let isActive = true;
 
-<<<<<<< HEAD
-        // Local simulation function - DISABLED for real data only
-        const startLocalSimulation = () => {
-             if (!isActive) return;
-             if (intervalId) clearInterval(intervalId);
-             // Do nothing - no mock data
-             console.log("Waiting for real data connection...");
-        };
-=======
-
         // Local simulation function removed: only backend data is used
->>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
 
         // Try to connect to WebSocket
         const connectWebSocket = () => {

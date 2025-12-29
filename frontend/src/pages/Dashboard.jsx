@@ -30,19 +30,12 @@ export function Dashboard() {
                     const machineList = await response.json();
                     setMachines(machineList);
                 } else {
-<<<<<<< HEAD
                     // Fallback if backend is offline
                     console.error("Backend offline, no machines available");
                     setMachines([]);
                 }
             } catch (error) {
                 console.error("Could not fetch machines", error);
-=======
-                    setMachines([]);
-                }
-            } catch (error) {
-                console.error("Could not fetch machines from backend", error);
->>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
                 setMachines([]);
             }
         };
