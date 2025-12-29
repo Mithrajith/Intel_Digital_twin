@@ -30,6 +30,21 @@ export function ControlPanel() {
         handleAlert(severity > 0.7 ? 'critical' : 'warning', message);
     };
 
+    const injectFault = async (type, severity) => {
+        try {
+            await fetch('http://localhost:8000/machine/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: 'inject_fault',
+                    parameters: { type, severity }
+                })
+            });
+        } catch (error) {
+            console.error("Failed to inject fault:", error);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
@@ -121,21 +136,30 @@ export function ControlPanel() {
                     </h3>
                     <div className="space-y-3">
                         <button
-                            onClick={() => handleInjectFault('overload', 'Injecting: Motor Overload conditions detected', 0.8)}
+                            onClick={() => {
+                                handleAlert('warning', 'Injecting: Motor Overload conditions detected');
+                                injectFault('motor_overload', 0.8);
+                            }}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-orange-500"
                         >
                             <span className="font-medium flex items-center gap-2"><Zap className="h-4 w-4" /> Overload Motor #2</span>
                             <span className="text-xs border border-orange-500/30 px-2 py-1 rounded">INJECT</span>
                         </button>
                         <button
-                            onClick={() => handleInjectFault('pressure_loss', 'Injecting: Hydraulic pressure loss imminent', 0.9)}
+                            onClick={() => {
+                                handleAlert('critical', 'Injecting: Hydraulic pressure loss imminent');
+                                injectFault('hydraulic_loss', 0.9);
+                            }}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors text-red-500"
                         >
                             <span className="font-medium flex items-center gap-2"><ShieldAlert className="h-4 w-4" /> Hydraulic Loss</span>
                             <span className="text-xs border border-red-500/30 px-2 py-1 rounded">INJECT</span>
                         </button>
                         <button
-                            onClick={() => handleInjectFault('drift', 'Injecting: Sensor drift detected in Joint #1', 0.4)}
+                            onClick={() => {
+                                handleAlert('warning', 'Injecting: Sensor drift detected in Joint #1');
+                                injectFault('sensor_drift', 0.4);
+                            }}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-blue-500"
                         >
                             <span className="font-medium flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Sensor Drift</span>

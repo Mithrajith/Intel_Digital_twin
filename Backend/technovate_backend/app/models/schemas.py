@@ -1,6 +1,6 @@
 """Pydantic schemas for API requests and responses."""
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -58,7 +58,7 @@ class HealthPrediction(BaseModel):
 class ControlCommand(BaseModel):
     """Control command request."""
     command: str = Field(..., description="Command: start, stop, reset, set_speed")
-    parameters: Optional[Dict[str, float]] = None
+    parameters: Optional[Dict[str, Any]] = None
 
 
 class ControlResponse(BaseModel):

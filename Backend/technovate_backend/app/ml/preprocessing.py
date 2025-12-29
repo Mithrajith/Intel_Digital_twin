@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from typing import List, Dict, Tuple
 from collections import deque
+from pathlib import Path
 
 
 class FeatureEngineer:
@@ -49,9 +50,9 @@ class FeatureEngineer:
         for key, value in current_data.items():
             features[f'{key}_current'] = value
         
-        # Add rolling statistics if buffer is full
+        # Add rolling statistics if buffer is not empty
         for key, buffer in self.buffers.items():
-            if len(buffer) >= self.window_size:
+            if buffer:
                 values = list(buffer)
                 features[f'{key}_mean'] = np.mean(values)
                 features[f'{key}_std'] = np.std(values)
@@ -139,3 +140,32 @@ class FeatureEngineer:
         self.buffers.clear()
         self.scaler = MinMaxScaler()
         self.is_fitted = False
+
+    def save(self, path: Path = None):
+        """
+        Save the fitted feature engineer (scaler) to disk.
+        """
+        if path is None:
+            # Use settings if available, else local default
+            from ..config import settings
+            path = settings.models_dir / "feature_engineer.pkl"
+            
+        import joblib
+        joblib.dump(self.scaler, path)
+        print(f"Feature engineer (scaler) saved to {path}")
+
+    def load(self, path: Path = None):
+        """
+        Load the fitted feature engineer (scaler) from disk.
+        """
+        if path is None:
+            from ..config import settings
+            path = settings.models_dir / "feature_engineer.pkl"
+            
+        if not path.exists():
+            raise FileNotFoundError(f"Feature engineer file not found: {path}")
+            
+        import joblib
+        self.scaler = joblib.load(path)
+        self.is_fitted = True
+        print(f"Feature engineer (scaler) loaded from {path}")

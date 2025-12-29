@@ -53,14 +53,14 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                 if (!isActive) return;
                 try {
                     const rawData = JSON.parse(event.data);
-                    
+
                     // Debug: log all incoming data
                     console.log('WebSocket data:', rawData);
-                    
+
                     // Map backend data to frontend expected format
                     // Backend: joint_1_angle, temperature_core, vibration_level, power_consumption
                     // Frontend: jointAngle, temperature, torque, vibration
-                    
+
                     const newDataPoint = {
                         time: new Date().toLocaleTimeString(),
                         jointAngle: rawData.joint_1_angle || rawData.axis_x_position || 0,
