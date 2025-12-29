@@ -1,9 +1,98 @@
 import React, { useState, useEffect } from 'react';
+import { Line } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 import { FileText, Download, Calendar, Search, Filter, RefreshCw, X } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 
 export function Logs() {
     const [logs, setLogs] = useState([]);
+    const [sensorData, setSensorData] = useState([]);
+    const [playbackIndex, setPlaybackIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+        // Fetch sensor data for playback
+        const fetchSensorData = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/sensor-data');
+                if (response.ok) {
+                    const data = await response.json();
+                    setSensorData(data);
+                }
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+            }
+        };
+
+        useEffect(() => {
+            fetchSensorData();
+        }, []);
+
+        // Playback effect
+        useEffect(() => {
+            let interval;
+            if (isPlaying && sensorData.length > 0) {
+                interval = setInterval(() => {
+                    setPlaybackIndex((prev) => (prev < sensorData.length - 1 ? prev + 1 : prev));
+                }, 500);
+            }
+            return () => clearInterval(interval);
+        }, [isPlaying, sensorData]);
+        // Chart data for playback
+        const playbackData = sensorData.slice(0, playbackIndex + 1);
+        const chartData = {
+            labels: playbackData.map((d) => d.timestamp),
+            datasets: [
+                {
+                    label: 'Temperature',
+                    data: playbackData.map((d) => d.temperature),
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                },
+                {
+                    label: 'Vibration',
+                    data: playbackData.map((d) => d.vibration),
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                },
+                {
+                    label: 'Pressure',
+                    data: playbackData.map((d) => d.pressure),
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                },
+                // Add ML prediction if available
+                ...(playbackData[0] && playbackData[0].prediction !== undefined
+                    ? [{
+                        label: 'Prediction',
+                        data: playbackData.map((d) => d.prediction),
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    }]
+                    : []),
+            ],
+        };
+        // Playback controls
+        const handleSliderChange = (e) => {
+            setPlaybackIndex(Number(e.target.value));
+            setIsPlaying(false);
+        };
+        const handlePlayPause = () => {
+            setIsPlaying((prev) => !prev);
+        };
+        const handleStop = () => {
+            setIsPlaying(false);
+            setPlaybackIndex(0);
+        };
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedType, setSelectedType] = useState('all');
@@ -81,6 +170,35 @@ export function Logs() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Historical Playback Section */}
+            <div className="mb-8 p-4 rounded-lg border border-border bg-card shadow-sm">
+                <h2 className="text-xl font-bold mb-2">Historical Playback</h2>
+                <div className="flex items-center gap-4 mb-4">
+                    <button onClick={handlePlayPause} className="px-3 py-1 rounded bg-primary text-white">
+                        {isPlaying ? 'Pause' : 'Play'}
+                    </button>
+                    <button onClick={handleStop} className="px-3 py-1 rounded bg-destructive text-white">Stop</button>
+                    <input
+                        type="range"
+                        min={0}
+                        max={sensorData.length - 1}
+                        value={playbackIndex}
+                        onChange={handleSliderChange}
+                        className="w-1/2"
+                        disabled={sensorData.length === 0}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                        {sensorData[playbackIndex]?.timestamp || 'No data'}
+                    </span>
+                </div>
+                <div className="bg-background rounded-lg p-4 border border-border">
+                    {sensorData.length > 0 ? (
+                        <Line data={chartData} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
+                    ) : (
+                        <div className="text-muted-foreground">No sensor data available for playback.</div>
+                    )}
+                </div>
+            </div>
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">System Logs</h1>
@@ -111,7 +229,7 @@ export function Logs() {
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* ...existing code... */}
             <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-card border border-border shadow-sm items-center">
                 <div className="flex-1 min-w-[200px] relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />

@@ -22,7 +22,7 @@ export function Dashboard() {
     const data = useSimulatedSensor(isPlaying, refreshRate, selectedMachineId);
 
     useEffect(() => {
-        // Fetch available machines from backend
+        // Fetch available machines from backend only
         const fetchMachines = async () => {
             try {
                 const response = await fetch('http://localhost:8000/machines');
@@ -30,12 +30,19 @@ export function Dashboard() {
                     const machineList = await response.json();
                     setMachines(machineList);
                 } else {
+<<<<<<< HEAD
                     // Fallback if backend is offline
                     console.error("Backend offline, no machines available");
                     setMachines([]);
                 }
             } catch (error) {
                 console.error("Could not fetch machines", error);
+=======
+                    setMachines([]);
+                }
+            } catch (error) {
+                console.error("Could not fetch machines from backend", error);
+>>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
                 setMachines([]);
             }
         };
@@ -86,20 +93,24 @@ export function Dashboard() {
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
                         <Server className="h-4 w-4 ml-2 text-blue-500" />
-                        <select 
-                            value={selectedMachineId}
-                            onChange={(e) => {
-                                setSelectedMachineId(e.target.value);
-                                setIsPlaying(false); // Stop stream when changing machine
-                            }}
-                            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8 text-blue-700 font-medium"
-                        >
-                            {machines.map(m => (
-                                <option key={m.id} value={m.id}>
-                                    {m.id.toUpperCase()} ({m.type.replace('_', ' ')})
-                                </option>
-                            ))}
-                        </select>
+                        {machines.length > 0 ? (
+                            <select 
+                                value={selectedMachineId}
+                                onChange={(e) => {
+                                    setSelectedMachineId(e.target.value);
+                                    setIsPlaying(false); // Stop stream when changing machine
+                                }}
+                                className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8 text-blue-700 font-medium"
+                            >
+                                {machines.map(m => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.id.toUpperCase()} ({m.type.replace('_', ' ')})
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <span className="text-red-500 text-sm ml-2">No machines available</span>
+                        )}
                     </div>
 
                     <button

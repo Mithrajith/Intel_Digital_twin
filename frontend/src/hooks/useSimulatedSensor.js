@@ -17,6 +17,7 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         let intervalId = null;
         let isActive = true;
 
+<<<<<<< HEAD
         // Local simulation function - DISABLED for real data only
         const startLocalSimulation = () => {
              if (!isActive) return;
@@ -24,6 +25,10 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
              // Do nothing - no mock data
              console.log("Waiting for real data connection...");
         };
+=======
+
+        // Local simulation function removed: only backend data is used
+>>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
 
         // Try to connect to WebSocket
         const connectWebSocket = () => {
@@ -82,22 +87,19 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                 }
             };
 
+
             ws.onerror = (error) => {
                 if (!isActive) return;
-                console.warn("WebSocket error, falling back to local simulation");
-                // Don't close here, let onclose handle it or just start local sim
-                startLocalSimulation();
+                console.error("WebSocket error, no backend data available");
+                // Do not simulate data, just keep data empty
             };
+
 
             ws.onclose = () => {
                 if (!isActive) return;
                 console.log("WebSocket closed");
                 wsRef.current = null;
-                // If connection closes unexpectedly (and we are still playing), fall back to local simulation
-                // We check ws.readyState to ensure we aren't in the middle of a manual close
-                if (isPlaying) {
-                   startLocalSimulation();
-                }
+                // Do not simulate data, just keep data empty
             };
 
             wsRef.current = ws;

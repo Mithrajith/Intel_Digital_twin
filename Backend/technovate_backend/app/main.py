@@ -9,6 +9,7 @@ import pandas as pd
 from io import StringIO
 from pathlib import Path
 import math
+import numpy as np
 
 from .config import settings
 from .models.schemas import (
@@ -90,7 +91,50 @@ async def lifespan(app: FastAPI):
         state.rul_estimator.load()
         print("Loaded pre-trained models")
     except FileNotFoundError:
-        print("No pre-trained models found. Will train on first run.")
+        print("No pre-trained models found. Training with synthetic data...")
+        # Generate synthetic training data
+        n_samples = 1000
+        X_train = []
+        y_failure = []
+        y_rul = []
+        
+        for _ in range(n_samples):
+            # Step simulation to get varied data
+            state.simulator.step()
+            sensor_data = state.sensor_gen.generate()
+            
+            # Extract features
+            features = state.feature_eng.extract_features({
+                'temperature_core': sensor_data.overall_vibration,  # Using vibration as proxy
+                'vibration_level': sensor_data.overall_vibration,
+                'power_consumption': sensor_data.power_consumption,
+                'joint_1_angle': state.simulator.get_joint_states()[0].angle if state.simulator.get_joint_states() else 0,
+            })
+            
+            if features is not None:
+                X_train.append(features)
+                # Simulate failure labels (random for now)
+                y_failure.append(np.random.choice([0, 1], p=[0.9, 0.1]))
+                # Simulate RUL (remaining useful life in hours)
+                y_rul.append(np.random.uniform(0, 1000))
+        
+        if X_train:
+            X_train = np.array(X_train)
+            y_failure = np.array(y_failure)
+            y_rul = np.array(y_rul)
+            
+            # Train models
+            state.anomaly_detector.train(X_train)
+            state.failure_predictor.train(X_train, y_failure)
+            state.rul_estimator.train(X_train, y_rul)
+            
+            # Save models
+            state.anomaly_detector.save()
+            state.failure_predictor.save()
+            state.rul_estimator.save()
+            print("Trained and saved models with synthetic data")
+        else:
+            print("Failed to generate training data")
     
     # Start simulation loop
     state.is_running = True
@@ -572,6 +616,7 @@ async def explain_failure(features: dict = Body(...)):
     Return SHAP values for the failure predictor given input features.
     Expects a dict of features (same as used for ML inference).
     """
+<<<<<<< HEAD
     try:
         import numpy as np
         
@@ -621,6 +666,21 @@ async def explain_failure(features: dict = Body(...)):
             "base_value": 0.0,
             "feature_names": []
         }
+=======
+    if not state.failure_predictor or not state.failure_predictor.is_trained:
+        raise HTTPException(status_code=503, detail="Failure predictor model is not trained or loaded. Please train the model first.")
+    
+    import numpy as np
+    # Convert features to numpy array
+    feature_vector = np.array([v for v in features.values()], dtype=np.float32).reshape(1, -1)
+    # Optionally pass feature names for UI
+    feature_names = list(features.keys())
+    try:
+        shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
+        return shap_result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error computing SHAP values: {str(e)}")
+>>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
 
 
 if __name__ == "__main__":
