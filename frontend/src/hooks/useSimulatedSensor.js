@@ -17,37 +17,8 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         let intervalId = null;
         let isActive = true;
 
-        // Local simulation function
-        const startLocalSimulation = () => {
-             if (!isActive) return;
-             if (intervalId) clearInterval(intervalId);
 
-             intervalId = setInterval(() => {
-                if (!isActive) {
-                    clearInterval(intervalId);
-                    return;
-                }
-                timeRef.current += 1;
-
-                const newDataPoint = {
-                    time: new Date().toLocaleTimeString(),
-                    // Sine wave with noise
-                    jointAngle: 45 + 30 * Math.sin(timeRef.current * 0.1) + (Math.random() - 0.5) * 2,
-                    torque: 20 + 10 * Math.cos(timeRef.current * 0.1) + (Math.random() - 0.5) * 5,
-                    temperature: 40 + timeRef.current * 0.05 + (Math.random() - 0.5) * 1, // Slow rise
-                    vibration: 1 + Math.random() * 0.5,
-                };
-
-                setData(prevData => {
-                    const newData = [...prevData, newDataPoint];
-                    // Keep last 30 points
-                    if (newData.length > 30) {
-                        return newData.slice(newData.length - 30);
-                    }
-                    return newData;
-                });
-            }, updateInterval);
-        };
+        // Local simulation function removed: only backend data is used
 
         // Try to connect to WebSocket
         const connectWebSocket = () => {
@@ -100,22 +71,19 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                 }
             };
 
+
             ws.onerror = (error) => {
                 if (!isActive) return;
-                console.warn("WebSocket error, falling back to local simulation");
-                // Don't close here, let onclose handle it or just start local sim
-                startLocalSimulation();
+                console.error("WebSocket error, no backend data available");
+                // Do not simulate data, just keep data empty
             };
+
 
             ws.onclose = () => {
                 if (!isActive) return;
                 console.log("WebSocket closed");
                 wsRef.current = null;
-                // If connection closes unexpectedly (and we are still playing), fall back to local simulation
-                // We check ws.readyState to ensure we aren't in the middle of a manual close
-                if (isPlaying) {
-                   startLocalSimulation();
-                }
+                // Do not simulate data, just keep data empty
             };
 
             wsRef.current = ws;
