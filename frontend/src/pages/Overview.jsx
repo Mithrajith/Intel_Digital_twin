@@ -62,7 +62,7 @@ export function Overview() {
                         Status: {healthScore > 80 ? "Normal" : "Attention Needed"}
                     </Badge>
                     <div className="text-sm text-muted-foreground">
-                        Last updated: {latest.time || "Connecting..."}
+                        Last updated: {new Date().toLocaleTimeString()}
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@ export function Overview() {
                         value={nextMaintenance}
                         unit="days"
                         icon={CheckCircle}
-                        status={rul < 100 ? "warning" : "success"}
+                        status={nextMaintenance < 100 ? "warning" : "success"}
                     />
                     <MetricCard
                         title="Predicted Failures"
@@ -140,8 +140,8 @@ export function Overview() {
                     <h3 className="font-semibold">Recent System Events</h3>
                 </div>
                 <div className="divide-y divide-border">
-                    {latest.raw && latest.raw.alerts && latest.raw.alerts.length > 0 ? (
-                        latest.raw.alerts.slice(0, 3).map((alert, i) => (
+                    {health && health.alerts && health.alerts.length > 0 ? (
+                        health.alerts.slice(0, 3).map((alert, i) => (
                             <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className={`h-2 w-2 rounded-full ${alert.type === 'critical' ? 'bg-red-500' : 'bg-yellow-500'}`} />

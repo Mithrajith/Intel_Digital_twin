@@ -616,7 +616,6 @@ async def explain_failure(features: dict = Body(...)):
     Return SHAP values for the failure predictor given input features.
     Expects a dict of features (same as used for ML inference).
     """
-<<<<<<< HEAD
     try:
         import numpy as np
         
@@ -666,21 +665,6 @@ async def explain_failure(features: dict = Body(...)):
             "base_value": 0.0,
             "feature_names": []
         }
-=======
-    if not state.failure_predictor or not state.failure_predictor.is_trained:
-        raise HTTPException(status_code=503, detail="Failure predictor model is not trained or loaded. Please train the model first.")
-    
-    import numpy as np
-    # Convert features to numpy array
-    feature_vector = np.array([v for v in features.values()], dtype=np.float32).reshape(1, -1)
-    # Optionally pass feature names for UI
-    feature_names = list(features.keys())
-    try:
-        shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
-        return shap_result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error computing SHAP values: {str(e)}")
->>>>>>> 43d5fd5af986a8e837ccce67409447799f701ce1
 
 
 if __name__ == "__main__":

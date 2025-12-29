@@ -45,6 +45,11 @@ export function Predictions() {
     const statusColor = healthData?.failure_probability > 0.5 ? "text-red-500" : "text-green-500";
     const statusText = healthData?.failure_probability > 0.5 ? "Critical Risk Detected" : "System Normal";
 
+    // Derived values to fix ReferenceErrors
+    const isHealthy = healthData?.failure_probability < 0.5;
+    const anomalyScore = healthData?.anomaly_score || 0;
+    const radius = 84;
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
