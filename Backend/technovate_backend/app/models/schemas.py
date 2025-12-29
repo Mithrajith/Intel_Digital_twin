@@ -73,3 +73,14 @@ class LogExportParams(BaseModel):
     start_time: Optional[float] = None
     end_time: Optional[float] = None
     format: str = "csv"
+
+
+class Log(BaseModel):
+    """System log entry."""
+    id: int
+    timestamp: float
+    event: str
+    type: str
+    user: str
+    machine_id: str
+

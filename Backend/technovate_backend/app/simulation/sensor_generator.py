@@ -104,19 +104,19 @@ class SensorGenerator:
         Inject a fault for testing ML models.
         
         Args:
-            fault_type: Type of fault (temperature, vibration, degradation)
+            fault_type: Type of fault (temperature, vibration, degradation, overload, pressure_loss, drift)
             severity: Fault severity (0-1)
         """
-        if fault_type == "temperature":
+        if fault_type == "temperature" or fault_type == "overload":
             # Increase all joint temperatures
             for joint_name in self.joint_temps.keys():
-                self.joint_temps[joint_name] += severity * 20.0
+                self.joint_temps[joint_name] += severity * 30.0
         
-        elif fault_type == "vibration":
-            # Increase degradation factor
+        elif fault_type == "vibration" or fault_type == "pressure_loss":
+            # Increase degradation factor temporarily or permanently
             self.degradation_factor = min(1.0, self.degradation_factor + severity)
         
-        elif fault_type == "degradation":
+        elif fault_type == "degradation" or fault_type == "drift":
             # Simulate wear
             self.cycles_count += int(severity * 50000)
             self.degradation_factor = min(1.0, self.cycles_count / 100000.0)

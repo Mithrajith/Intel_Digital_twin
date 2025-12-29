@@ -1,29 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Info, AlertCircle, CheckCircle, BellOff } from 'lucide-react';
 import { AlertCard } from '../components/common/AlertCard';
 import { Badge } from '../components/common/Badge';
+import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
+import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
 export function Alerts() {
     const [activeTab, setActiveTab] = useState('active');
+    const { refreshRate } = useChartRefreshRate();
+    const data = useSimulatedSensor(true, refreshRate);
+    const [alerts, setAlerts] = useState([]);
 
-    const alertsData = [
-        { id: 1, type: 'critical', title: 'Hydraulic Pressure Low', message: 'Main pump pressure below 200 PSI. Immediate check required.', time: '10:42 AM' },
-        { id: 2, type: 'warning', title: 'Motor Temp Elevating', message: 'Joint #2 Motor temperature rising (55°C). Load reduction recommended.', time: '10:15 AM' },
-        { id: 3, type: 'info', title: 'System Backup Complete', message: 'Daily log backup completed successfully.', time: '09:00 AM' },
-        { id: 4, type: 'warning', title: 'Network Latency', message: 'Control loop latency > 100ms detected.', time: '08:45 AM' },
-    ];
+    useEffect(() => {
+        if (data.length > 0) {
+            const latest = data[data.length - 1];
+            if (latest.raw && latest.raw.alerts && latest.raw.alerts.length > 0) {
+                // Add new alerts
+                const newAlerts = latest.raw.alerts.map(a => ({
+                    id: Date.now() + Math.random(),
+                    type: a.type,
+                    title: a.title,
+                    message: a.message,
+                    time: new Date().toLocaleTimeString()
+                }));
+                
+                setAlerts(prev => {
+                    // Simple deduplication: don't add if title matches the last one within 5 seconds
+                    // Or just check if the exact same alert is at the top
+                    const lastAlert = prev.length > 0 ? prev[0] : null;
+                    
+                    const uniqueNewAlerts = newAlerts.filter(na => {
+                        if (!lastAlert) return true;
+                        // Avoid spamming the same alert
+                        return na.title !== lastAlert.title || na.message !== lastAlert.message;
+                    });
+                    
+                    if (uniqueNewAlerts.length === 0) return prev;
+                    return [...uniqueNewAlerts, ...prev].slice(0, 50); // Keep last 50
+                });
+            }
+        }
+    }, [data]);
+
+    const criticalCount = alerts.filter(a => a.type === 'critical').length;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">System Alerts</h1>
-                    <p className="text-muted-foreground mt-1">Centralized warning management</p>
+                    <p className="text-muted-foreground mt-1">Centralized warning management (Live Stream)</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Badge variant="error" className="text-sm px-3 py-1 animate-pulse">
-                        2 Critical Issues
-                    </Badge>
+                    {criticalCount > 0 && (
+                        <Badge variant="error" className="text-sm px-3 py-1 animate-pulse">
+                            {criticalCount} Critical Issues
+                        </Badge>
+                    )}
                 </div>
             </div>
 
@@ -43,8 +76,8 @@ export function Alerts() {
             </div>
 
             <div className="space-y-4">
-                {activeTab === 'active' ? (
-                    alertsData.map(alert => (
+                {alerts.length > 0 ? (
+                    alerts.map(alert => (
                         <AlertCard
                             key={alert.id}
                             variant={alert.type}
@@ -57,7 +90,7 @@ export function Alerts() {
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         <BellOff className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No historical alerts found for this session.</p>
+                        <p>No active alerts detected in live stream.</p>
                     </div>
                 )}
             </div>

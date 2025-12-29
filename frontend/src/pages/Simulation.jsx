@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Box, Zap, Layers } from 'lucide-react';
+import { Play, Pause, RotateCcw, Box, Zap, Layers, Activity } from 'lucide-react';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
@@ -10,7 +10,29 @@ export function Simulation() {
     const data = useSimulatedSensor(isPlaying, 50); // Faster update for smooth animation
 
     const currentAngle = data.length > 0 ? data[data.length - 1].jointAngle : 45;
-    const currentVibration = data.length > 0 ? data[data.length - 1].vibration : 0;
+    const latest = data.length > 0 ? data[data.length - 1] : {};
+    const temp = latest.temperature || 0;
+    const vib = latest.vibration || 0;
+    const torque = latest.torque || 0;
+    const failureProb = latest.failure_probability || 0;
+
+    // Determine failing part logic
+    let failingPart = null;
+    let failureReason = "";
+    
+    // Logic: If failure probability is significant, identify the contributor
+    if (failureProb > 0.2) {
+        if (temp > 60) {
+            failingPart = 'motor'; // Base Joint
+            failureReason = "Overheating";
+        } else if (vib > 2.0) {
+            failingPart = 'link2'; // Arm Link
+            failureReason = "Structural Vibration";
+        } else if (torque > 30) {
+            failingPart = 'joint2'; // Elbow Joint
+            failureReason = "Gearbox Strain";
+        }
+    }
 
     // Calculate arm position based on angle
     // Simple 2-link arm kinematics for visualization
@@ -33,15 +55,23 @@ export function Simulation() {
         y: p1.y + L2 * Math.sin(theta2 + theta1)
     };
 
-    // Stress highlight color based on vibration
-    const stressColor = currentVibration > 3 ? '#ef4444' : currentVibration > 2 ? '#f59e0b' : '#3b82f6';
+    // Helper for colors
+    const getPartColor = (partName, defaultColor) => {
+        if (failingPart === partName) return '#ef4444'; // Red for failure
+        return defaultColor;
+    };
+    
+    const getPartClass = (partName) => {
+        if (failingPart === partName) return "animate-pulse";
+        return "";
+    };
 
     return (
         <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Digital Twin Simulation</h1>
-                    <p className="text-muted-foreground mt-1">Real-time kinematic mirror of RA-204</p>
+                    <p className="text-muted-foreground mt-1">Real-time kinematic mirror & Failure Localization</p>
                 </div>
                 <div className="flex items-center gap-4 bg-card border border-border rounded-lg p-2">
                     <button
@@ -92,26 +122,46 @@ export function Simulation() {
                                 strokeLinecap="round"
                             />
 
-                            {/* Joint 1 */}
-                            <circle cx={origin.x} cy={origin.y} r="15" fill="#374151" stroke="#9ca3af" strokeWidth="2" />
+                            {/* Joint 1 (Motor) */}
+                            <circle 
+                                cx={origin.x} cy={origin.y} r="18" 
+                                fill={getPartColor('motor', '#374151')} 
+                                stroke="#9ca3af" strokeWidth="2"
+                                className={getPartClass('motor')}
+                            />
+                            <text x={origin.x + 25} y={origin.y} fill="white" fontSize="10" opacity="0.5">Base Motor</text>
 
                             {/* Link 2 (The one moving) */}
                             <line
                                 x1={p1.x} y1={p1.y}
                                 x2={p2.x} y2={p2.y}
-                                stroke={stressColor}
+                                stroke={getPartColor('link2', '#4b5563')}
                                 strokeWidth="16"
                                 strokeLinecap="round"
-                                className="transition-colors duration-300"
+                                className={`transition-colors duration-300 ${getPartClass('link2')}`}
                             />
 
                             {/* Joint 2 */}
-                            <circle cx={p1.x} cy={p1.y} r="12" fill="#374151" stroke="#9ca3af" strokeWidth="2" />
+                            <circle 
+                                cx={p1.x} cy={p1.y} r="14" 
+                                fill={getPartColor('joint2', '#374151')} 
+                                stroke="#9ca3af" strokeWidth="2" 
+                                className={getPartClass('joint2')}
+                            />
+                            <text x={p1.x + 20} y={p1.y} fill="white" fontSize="10" opacity="0.5">Elbow Joint</text>
 
                             {/* End Effector */}
                             <circle cx={p2.x} cy={p2.y} r="8" fill="#ef4444" />
 
-                            {/* Ghost/Target indicators could go here */}
+                            {/* Failure Indicator Label on Model */}
+                            {failingPart && (
+                                <g>
+                                    <rect x="280" y="50" width="110" height="60" rx="4" fill="rgba(239, 68, 68, 0.2)" stroke="#ef4444" />
+                                    <text x="290" y="70" fill="#ef4444" fontWeight="bold" fontSize="12">⚠ FAILURE RISK</text>
+                                    <text x="290" y="90" fill="white" fontSize="10">Part: {failingPart.toUpperCase()}</text>
+                                    <text x="290" y="102" fill="white" fontSize="10">Reason: {failureReason}</text>
+                                </g>
+                            )}
                         </svg>
                     </div>
 
@@ -125,6 +175,27 @@ export function Simulation() {
 
                 {/* Sidebar Controls/Stats */}
                 <div className="space-y-4 overflow-y-auto">
+                    {/* Diagnostics Panel */}
+                    <div className={`p-4 rounded-lg border ${failingPart ? 'bg-red-500/10 border-red-500/50' : 'bg-card border-border'}`}>
+                        <h3 className={`font-semibold mb-4 flex items-center gap-2 ${failingPart ? 'text-red-500' : ''}`}>
+                            <Activity className="h-4 w-4" /> Real-time Diagnostics
+                        </h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">System Status</span>
+                                <span className={`text-sm font-bold ${failingPart ? 'text-red-500' : 'text-green-500'}`}>
+                                    {failingPart ? 'CRITICAL' : 'NOMINAL'}
+                                </span>
+                            </div>
+                            {failingPart && (
+                                <div className="bg-red-500/20 p-3 rounded text-xs text-red-200">
+                                    Detected anomaly in <strong>{failingPart.toUpperCase()}</strong> due to {failureReason.toLowerCase()}.
+                                    Recommended action: Inspect immediately.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="p-4 rounded-lg bg-card border border-border">
                         <h3 className="font-semibold mb-4 flex items-center gap-2">
                             <Layers className="h-4 w-4" /> Simulation Layers

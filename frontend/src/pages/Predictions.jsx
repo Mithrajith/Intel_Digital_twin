@@ -2,8 +2,25 @@ import React from 'react';
 import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { MetricCard } from '../components/common/MetricCard';
+import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
+import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
 export function Predictions() {
+    const { refreshRate } = useChartRefreshRate();
+    const data = useSimulatedSensor(true, refreshRate);
+    
+    const latest = data.length > 0 ? data[data.length - 1] : {};
+    const failureProb = latest.failure_probability || 0;
+    const rul = latest.rul_hours || 0;
+    const anomalyScore = latest.anomaly_score || 0;
+    
+    // Calculate circle offset
+    const radius = 90;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference * (1 - failureProb);
+    
+    const isHealthy = failureProb < 0.5 && anomalyScore < 0.7;
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
@@ -11,7 +28,7 @@ export function Predictions() {
                     <h1 className="text-3xl font-bold tracking-tight">AI Predictive Health</h1>
                     <p className="text-muted-foreground mt-1">Machine Learning Analysis Model v2.4 (XGBoost + LSTM)</p>
                 </div>
-                <Badge variant="info" className="text-sm px-3 py-1">
+                <Badge variant={isHealthy ? "success" : "warning"} className="text-sm px-3 py-1">
                     Confidence Score: 98.2%
                 </Badge>
             </div>
@@ -27,29 +44,34 @@ export function Predictions() {
                                 strokeWidth="12"
                                 stroke="currentColor"
                                 fill="transparent"
-                                r="90"
+                                r={radius}
                                 cx="96"
                                 cy="96"
                             />
                             <circle
-                                className="text-green-500"
+                                className={failureProb > 0.5 ? "text-red-500" : "text-green-500"}
                                 strokeWidth="12"
-                                strokeDasharray={90 * 2 * Math.PI}
-                                strokeDashoffset={90 * 2 * Math.PI * (1 - 0.02)}
+                                strokeDasharray={circumference}
+                                strokeDashoffset={offset}
                                 strokeLinecap="round"
                                 stroke="currentColor"
                                 fill="transparent"
-                                r="90"
+                                r={radius}
                                 cx="96"
                                 cy="96"
+                                style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }}
                             />
                         </svg>
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span className="text-5xl font-bold text-green-500">2%</span>
+                            <span className={`text-5xl font-bold ${failureProb > 0.5 ? "text-red-500" : "text-green-500"}`}>
+                                {(failureProb * 100).toFixed(1)}%
+                            </span>
                         </div>
                     </div>
                     <p className="text-sm text-muted-foreground max-w-xs">
-                        System is operating within normal parameters. No immediate risks detected.
+                        {failureProb > 0.5 
+                            ? "High risk of failure detected. Maintenance recommended." 
+                            : "System is operating within normal parameters. No immediate risks detected."}
                     </p>
                 </div>
 
@@ -57,16 +79,16 @@ export function Predictions() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <MetricCard
                         title="Remaining Useful Life"
-                        value="1,240"
-                        unit="cycles"
+                        value={rul.toFixed(0)}
+                        unit="hours"
                         icon={ShieldCheck}
-                        status="success"
+                        status={rul < 50 ? "warning" : "success"}
                     />
                     <MetricCard
-                        title="Anomaly Count (24h)"
-                        value="0"
+                        title="Anomaly Score"
+                        value={anomalyScore.toFixed(2)}
                         icon={AlertTriangle}
-                        status="success"
+                        status={anomalyScore > 0.7 ? "error" : "success"}
                     />
                     <MetricCard
                         title="Model Accuracy"
@@ -76,8 +98,9 @@ export function Predictions() {
                     />
                     <MetricCard
                         title="Drift Detected"
-                        value="None"
+                        value={anomalyScore > 0.8 ? "Yes" : "None"}
                         icon={HelpCircle}
+                        status={anomalyScore > 0.8 ? "warning" : "neutral"}
                     />
                 </div>
             </div>

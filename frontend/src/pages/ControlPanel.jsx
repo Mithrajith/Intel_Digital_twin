@@ -6,25 +6,36 @@ export function ControlPanel() {
     const [isRunning, setIsRunning] = useState(true);
     const [alerts, setAlerts] = useState([]);
 
-    const handleAlert = (type, message) => {
-        const newAlert = {
-            id: Date.now(),
-            variant: type,
-            title: type === 'critical' ? 'System Emergency' : 'System Warning',
-            message: message,
-            timestamp: new Date().toLocaleTimeString()
-        };
-        setAlerts([newAlert, ...alerts]);
+    const sendCommand = async (command, parameters = {}) => {
+        try {
+            const response = await fetch('http://localhost:8000/machine/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    machine_id: 'robot_01',
+                    command: command,
+                    parameters: parameters
+                })
+            });
+            if (!response.ok) throw new Error('Command failed');
+            return await response.json();
+        } catch (error) {
+            console.error("Control error:", error);
+            handleAlert('critical', `Command Failed: ${error.message}`);
+        }
     };
 
-    const clearAlerts = () => setAlerts([]);
+    const handleInjectFault = async (type, message, severity = 0.8) => {
+        await sendCommand('inject_fault', { type, severity });
+        handleAlert(severity > 0.7 ? 'critical' : 'warning', message);
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">System Control Panel</h1>
-                    <p className="text-muted-foreground mt-1">Manual overrides and fault injection</p>
+                    <p className="text-muted-foreground mt-1">Manual overrides and fault injection (Live Backend)</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className={`h-3 w-3 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
@@ -39,13 +50,20 @@ export function ControlPanel() {
                 </h2>
                 <div className="flex flex-wrap gap-4">
                     <button
-                        onClick={() => { setIsRunning(false); handleAlert('critical', 'Emergency Stop Triggered by Operator'); }}
+                        onClick={() => { 
+                            setIsRunning(false); 
+                            sendCommand('stop');
+                            handleAlert('critical', 'Emergency Stop Triggered by Operator'); 
+                        }}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-md text-lg shadow-[0_0_15px_rgba(220,38,38,0.5)] active:scale-95 transition-all"
                     >
                         EMERGENCY STOP
                     </button>
                     <button
-                        onClick={() => handleAlert('warning', 'Soft Reset Initiated')}
+                        onClick={() => {
+                            sendCommand('stop');
+                            handleAlert('warning', 'Soft Reset Initiated');
+                        }}
                         className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-4 px-8 rounded-md text-lg active:scale-95 transition-all"
                     >
                         SOFT STOP
@@ -61,7 +79,10 @@ export function ControlPanel() {
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                         <button
-                            onClick={() => setIsRunning(true)}
+                            onClick={() => {
+                                setIsRunning(true);
+                                sendCommand('start');
+                            }}
                             className="flex flex-col items-center justify-center p-6 rounded-lg border border-border hover:bg-accent transition-colors gap-3"
                             disabled={isRunning}
                         >
@@ -69,7 +90,10 @@ export function ControlPanel() {
                             <span className="font-medium">Start Routine</span>
                         </button>
                         <button
-                            onClick={() => setIsRunning(false)}
+                            onClick={() => {
+                                setIsRunning(false);
+                                sendCommand('stop');
+                            }}
                             className="flex flex-col items-center justify-center p-6 rounded-lg border border-border hover:bg-accent transition-colors gap-3"
                             disabled={!isRunning}
                         >
@@ -77,7 +101,11 @@ export function ControlPanel() {
                             <span className="font-medium">Pause Routine</span>
                         </button>
                         <button
-                            onClick={() => { setIsRunning(false); clearAlerts(); }}
+                            onClick={() => { 
+                                setIsRunning(false); 
+                                clearAlerts(); 
+                                sendCommand('reset');
+                            }}
                             className="col-span-2 flex items-center justify-center p-4 rounded-lg border border-border hover:bg-accent transition-colors gap-3"
                         >
                             <RotateCcw className="h-5 w-5 text-blue-500" />
@@ -93,21 +121,21 @@ export function ControlPanel() {
                     </h3>
                     <div className="space-y-3">
                         <button
-                            onClick={() => handleAlert('warning', 'Injecting: Motor Overload conditions detected')}
+                            onClick={() => handleInjectFault('overload', 'Injecting: Motor Overload conditions detected', 0.8)}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-orange-500"
                         >
                             <span className="font-medium flex items-center gap-2"><Zap className="h-4 w-4" /> Overload Motor #2</span>
                             <span className="text-xs border border-orange-500/30 px-2 py-1 rounded">INJECT</span>
                         </button>
                         <button
-                            onClick={() => handleAlert('critical', 'Injecting: Hydraulic pressure loss imminent')}
+                            onClick={() => handleInjectFault('pressure_loss', 'Injecting: Hydraulic pressure loss imminent', 0.9)}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors text-red-500"
                         >
                             <span className="font-medium flex items-center gap-2"><ShieldAlert className="h-4 w-4" /> Hydraulic Loss</span>
                             <span className="text-xs border border-red-500/30 px-2 py-1 rounded">INJECT</span>
                         </button>
                         <button
-                            onClick={() => handleAlert('warning', 'Injecting: Sensor drift detected in Joint #1')}
+                            onClick={() => handleInjectFault('drift', 'Injecting: Sensor drift detected in Joint #1', 0.4)}
                             className="w-full flex items-center justify-between p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-blue-500"
                         >
                             <span className="font-medium flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Sensor Drift</span>

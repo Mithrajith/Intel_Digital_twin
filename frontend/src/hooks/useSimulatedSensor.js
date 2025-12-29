@@ -17,36 +17,12 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
         let intervalId = null;
         let isActive = true;
 
-        // Local simulation function
+        // Local simulation function - DISABLED for real data only
         const startLocalSimulation = () => {
              if (!isActive) return;
              if (intervalId) clearInterval(intervalId);
-
-             intervalId = setInterval(() => {
-                if (!isActive) {
-                    clearInterval(intervalId);
-                    return;
-                }
-                timeRef.current += 1;
-
-                const newDataPoint = {
-                    time: new Date().toLocaleTimeString(),
-                    // Sine wave with noise
-                    jointAngle: 45 + 30 * Math.sin(timeRef.current * 0.1) + (Math.random() - 0.5) * 2,
-                    torque: 20 + 10 * Math.cos(timeRef.current * 0.1) + (Math.random() - 0.5) * 5,
-                    temperature: 40 + timeRef.current * 0.05 + (Math.random() - 0.5) * 1, // Slow rise
-                    vibration: 1 + Math.random() * 0.5,
-                };
-
-                setData(prevData => {
-                    const newData = [...prevData, newDataPoint];
-                    // Keep last 30 points
-                    if (newData.length > 30) {
-                        return newData.slice(newData.length - 30);
-                    }
-                    return newData;
-                });
-            }, updateInterval);
+             // Do nothing - no mock data
+             console.log("Waiting for real data connection...");
         };
 
         // Try to connect to WebSocket
@@ -85,7 +61,13 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                         jointAngle: rawData.joint_1_angle || rawData.axis_x_position || 0,
                         temperature: rawData.temperature_core || rawData.tool_temperature || rawData.bearing_temperature || 0,
                         torque: rawData.power_consumption || rawData.spindle_speed || rawData.motor_load || 0, // Mapping power/speed to torque for viz
-                        vibration: rawData.vibration_level || rawData.vibration_spindle || 0
+                        vibration: rawData.vibration_level || rawData.vibration_spindle || 0,
+                        // Prediction fields
+                        anomaly_score: rawData.anomaly_score || 0,
+                        failure_probability: rawData.failure_probability || 0,
+                        rul_hours: rawData.rul_hours || 0,
+                        // Pass through raw data for SHAP
+                        raw: rawData
                     };
 
                     setData(prevData => {

@@ -13,6 +13,7 @@ export function Logs() {
     const fetchLogs = async () => {
         setLoading(true);
         try {
+            // Fetch from Main Backend (8000) - Real System Logs
             const response = await fetch(`http://localhost:8000/logs?_t=${new Date().getTime()}`);
             if (response.ok) {
                 const data = await response.json();
@@ -52,30 +53,8 @@ export function Logs() {
     });
 
     const handleExportCSV = () => {
-        if (filteredLogs.length === 0) return;
-
-        const headers = ['ID', 'Timestamp', 'Event', 'Machine', 'Type', 'User'];
-        const csvContent = [
-            headers.join(','),
-            ...filteredLogs.map(log => [
-                log.id,
-                new Date(log.timestamp).toLocaleString(),
-                `"${log.event.replace(/"/g, '""')}"`,
-                log.machine_id || '',
-                log.type,
-                log.user
-            ].join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `system_logs_${new Date().toISOString().slice(0, 10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Use the Main Backend (8000) for exporting sensor logs
+        window.location.href = `http://localhost:8000/logs/export?start_time=${startDate ? new Date(startDate).getTime() / 1000 : ''}&end_time=${endDate ? new Date(endDate).getTime() / 1000 : ''}`;
     };
 
     const handleExportJSON = () => {

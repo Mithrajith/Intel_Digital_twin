@@ -31,19 +31,12 @@ export function Dashboard() {
                     setMachines(machineList);
                 } else {
                     // Fallback if backend is offline
-                    setMachines([
-                        { id: 'robot_01', type: 'robotic_arm' },
-                        { id: 'cnc_01', type: 'cnc_milling' },
-                        { id: 'conveyor_01', type: 'conveyor_belt' }
-                    ]);
+                    console.error("Backend offline, no machines available");
+                    setMachines([]);
                 }
             } catch (error) {
-                console.warn("Could not fetch machines, using defaults", error);
-                setMachines([
-                    { id: 'robot_01', type: 'robotic_arm' },
-                    { id: 'cnc_01', type: 'cnc_milling' },
-                    { id: 'conveyor_01', type: 'conveyor_belt' }
-                ]);
+                console.error("Could not fetch machines", error);
+                setMachines([]);
             }
         };
         fetchMachines();
@@ -68,23 +61,27 @@ export function Dashboard() {
     // SHAP explainability
     const { shap, loading: shapLoading, error: shapError, fetchSHAP } = useSHAPExplanation();
 
-    // Prepare latest features for SHAP (use the last data point)
-    const latestData = data[data.length - 1] || {};
     const handleExplain = () => {
-        // Only send numeric features
-        const features = {};
-        Object.entries(latestData).forEach(([k, v]) => {
-            if (typeof v === 'number' && !isNaN(v)) features[k] = v;
-        });
-        if (Object.keys(features).length > 0) fetchSHAP(features);
+        if (data.length > 0) {
+            const latestData = data[data.length - 1];
+            // Use raw data if available (from WebSocket), otherwise construct from mapped fields
+            // Send full raw data so backend can reconstruct all features (including joint velocities/torques)
+            const features = latestData.raw ? latestData.raw : {
+                temperature_core: latestData.temperature,
+                vibration_level: latestData.vibration,
+                power_consumption: latestData.torque, // Mapped from torque in hook
+                joint_1_angle: latestData.jointAngle
+            };
+            fetchSHAP(features);
+        }
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Live Condition Monitoring</h1>
-                    <p className="text-muted-foreground mt-1">Real-time sensor telemetry from {selectedMachineId}</p>
+                    <h1 className="text-3xl font-bold tracking-tight">AI Predictive Health</h1>
+                    <p className="text-muted-foreground mt-1">Real-time AI analysis & sensor telemetry from {selectedMachineId}</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
@@ -119,6 +116,31 @@ export function Dashboard() {
                 </div>
             </div>
 
+            {/* ML Predictions Panel - Promoted to Top */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <MetricCard
+                    title="Anomaly Score"
+                    value={getLatestValue('anomaly_score')}
+                    unit=""
+                    status={Number(getLatestValue('anomaly_score')) > 0.7 ? 'warning' : 'neutral'}
+                    className="border-blue-500/50 bg-blue-500/5"
+                />
+                <MetricCard
+                    title="Failure Probability"
+                    value={(Number(getLatestValue('failure_probability')) * 100).toFixed(1)}
+                    unit="%"
+                    status={Number(getLatestValue('failure_probability')) > 0.5 ? 'error' : 'neutral'}
+                    className="border-red-500/50 bg-red-500/5"
+                />
+                <MetricCard
+                    title="Remaining Useful Life"
+                    value={getLatestValue('rul_hours')}
+                    unit="hrs"
+                    status={Number(getLatestValue('rul_hours')) < 50 ? 'warning' : 'neutral'}
+                    className="border-green-500/50 bg-green-500/5"
+                />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <MetricCard
                     title="Joint Angle"
@@ -144,28 +166,6 @@ export function Dashboard() {
                     value={getLatestValue('vibration')}
                     unit="g"
                     icon={Activity}
-                />
-            </div>
-
-            {/* ML Predictions Panel */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-                <MetricCard
-                    title="Anomaly Score"
-                    value={getLatestValue('anomaly_score')}
-                    unit=""
-                    status={Number(getLatestValue('anomaly_score')) > 0.7 ? 'warning' : 'neutral'}
-                />
-                <MetricCard
-                    title="Failure Probability"
-                    value={getLatestValue('failure_probability')}
-                    unit=""
-                    status={Number(getLatestValue('failure_probability')) > 0.5 ? 'error' : 'neutral'}
-                />
-                <MetricCard
-                    title="Remaining Useful Life"
-                    value={getLatestValue('rul_hours')}
-                    unit="hrs"
-                    status={Number(getLatestValue('rul_hours')) < 50 ? 'warning' : 'neutral'}
                 />
             </div>
 

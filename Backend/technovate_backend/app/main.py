@@ -13,7 +13,7 @@ import math
 from .config import settings
 from .models.schemas import (
     MachineMetadata, MachineState, HealthPrediction,
-    ControlCommand, ControlResponse, JointInfo, JointState
+    ControlCommand, ControlResponse, JointInfo, JointState, Log
 )
 from .simulation.urdf_parser import URDFParser
 from .simulation.physics_sim import PhysicsSimulator
@@ -37,6 +37,7 @@ class AppState:
     failure_predictor: FailurePredictor = None
     rul_estimator: RULEstimator = None
     sensor_logs: list = []
+    system_logs: list = []
     is_running: bool = False
     simulation_task: asyncio.Task = None
 
@@ -95,6 +96,16 @@ async def lifespan(app: FastAPI):
     state.is_running = True
     state.simulation_task = asyncio.create_task(simulation_loop())
     
+    # Log startup
+    state.system_logs.append(Log(
+        id=1,
+        timestamp=time.time() * 1000,
+        event="System Started",
+        type="info",
+        user="System",
+        machine_id="armpi_fpv_01"
+    ))
+
     yield
     
     # Shutdown
@@ -383,11 +394,28 @@ async def control_machine(command: ControlCommand):
     else:
         raise HTTPException(status_code=400, detail=f"Unknown command: {command.command}")
     
+    # Log the command
+    state.system_logs.append(Log(
+        id=len(state.system_logs) + 1,
+        timestamp=time.time() * 1000,  # JS expects ms
+        event=message,
+        type="info" if success else "error",
+        user="Operator",
+        machine_id="armpi_fpv_01"
+    ))
+
     return ControlResponse(
         success=success,
         message=message,
         timestamp=time.time()
     )
+
+
+@app.get("/logs", response_model=list[Log])
+async def get_logs():
+    """Get system logs."""
+    # Return logs sorted by timestamp desc
+    return sorted(state.system_logs, key=lambda x: x.timestamp, reverse=True)
 
 
 @app.get("/logs/export")
@@ -456,15 +484,20 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
             data["power_consumption"] = sensor_data.power_consumption
 
             # --- Real-time ML inference integration ---
-            # Prepare features for ML models
+            # Prepare features for ML models (matching train_models.py keys)
+            # Calculate aggregates
+            avg_velocity = sum(abs(js.velocity) for js in joint_states) / len(joint_states) if joint_states else 0.0
+            avg_torque = sum(abs(js.torque) for js in joint_states) / len(joint_states) if joint_states else 0.0
+            avg_angle = sum(abs(js.angle) for js in joint_states) / len(joint_states) if joint_states else 0.0
+
             features_for_eng = {
-                "temperature_core": data["temperature_core"],
-                "vibration_level": data["vibration_level"],
-                "power_consumption": data["power_consumption"],
+                "temperature": data["temperature_core"],
+                "vibration": data["vibration_level"],
+                "power": data["power_consumption"],
+                "velocity": avg_velocity,
+                "torque": avg_torque,
+                "angle": avg_angle
             }
-            # Add joint_1_angle as a feature if available
-            if "joint_1_angle" in data:
-                features_for_eng["joint_1_angle"] = data["joint_1_angle"]
 
             # Add sample to rolling buffer
             state.feature_eng.add_sample(features_for_eng)
@@ -481,17 +514,37 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
             except Exception as e:
                 anomaly_score = 0.0
             try:
-                failure_prob = float(state.failure_predictor.predict_proba(feature_vector)[0][1])
+                failure_prob = float(state.failure_predictor.predict_proba(feature_vector))
             except Exception as e:
                 failure_prob = 0.0
             try:
-                rul_hours = float(state.rul_estimator.predict(feature_vector)[0])
+                rul_hours = float(state.rul_estimator.predict(feature_vector))
             except Exception as e:
                 rul_hours = 0.0
 
             data["anomaly_score"] = anomaly_score
             data["failure_probability"] = failure_prob
             data["rul_hours"] = rul_hours
+
+            # Generate alerts for WebSocket
+            alerts = []
+            if anomaly_score > 0.7:
+                alerts.append({"type": "warning", "title": "Anomaly Detected", "message": f"High anomaly score: {anomaly_score:.2f}"})
+            if failure_prob > 0.7:
+                alerts.append({"type": "critical", "title": "Failure Imminent", "message": f"Failure probability: {failure_prob:.2f}"})
+            if rul_hours < 50:
+                alerts.append({"type": "warning", "title": "Low RUL", "message": f"Remaining Useful Life: {rul_hours:.1f} hours"})
+            
+            # Check sensor thresholds
+            if data["temperature_core"] > 80:
+                alerts.append({"type": "critical", "title": "Overheating", "message": f"Core temperature critical: {data['temperature_core']:.1f}°C"})
+            elif data["temperature_core"] > 60:
+                alerts.append({"type": "warning", "title": "High Temperature", "message": f"Core temperature high: {data['temperature_core']:.1f}°C"})
+                
+            if data["vibration_level"] > 3.0:
+                alerts.append({"type": "critical", "title": "High Vibration", "message": f"Vibration level critical: {data['vibration_level']:.2f}g"})
+
+            data["alerts"] = alerts
 
             # Debug: print outgoing data for troubleshooting
             print('WebSocket send:', data)
@@ -519,13 +572,55 @@ async def explain_failure(features: dict = Body(...)):
     Return SHAP values for the failure predictor given input features.
     Expects a dict of features (same as used for ML inference).
     """
-    import numpy as np
-    # Convert features to numpy array
-    feature_vector = np.array([v for v in features.values()], dtype=np.float32).reshape(1, -1)
-    # Optionally pass feature names for UI
-    feature_names = list(features.keys())
-    shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
-    return shap_result
+    try:
+        import numpy as np
+        
+        # Map raw features to training feature names if needed
+        # If input has 'temperature_core', it's likely raw data from frontend
+        if "temperature_core" in features:
+            # Reconstruct aggregates
+            # Note: Frontend sends angles in degrees, model expects radians for 'angle' feature
+            
+            # Extract joint data if available
+            velocities = [v for k, v in features.items() if 'velocity' in k and 'joint' in k]
+            torques = [v for k, v in features.items() if 'torque' in k and 'joint' in k]
+            angles_deg = [v for k, v in features.items() if 'angle' in k and 'joint' in k]
+            
+            avg_velocity = sum(abs(v) for v in velocities) / len(velocities) if velocities else 0.0
+            avg_torque = sum(abs(v) for v in torques) / len(torques) if torques else 0.0
+            # Convert degrees to radians for average angle
+            avg_angle = sum(abs(v * (math.pi / 180.0)) for v in angles_deg) / len(angles_deg) if angles_deg else 0.0
+            
+            mapped_features = {
+                "temperature": features.get("temperature_core", 0.0),
+                "vibration": features.get("vibration_level", 0.0),
+                "power": features.get("power_consumption", 0.0),
+                "velocity": avg_velocity,
+                "torque": avg_torque,
+                "angle": avg_angle
+            }
+            
+            # Use FeatureEngineer to get full feature vector (using current history)
+            # Note: This uses the global state's history, which is correct for "explain current state"
+            ml_features = state.feature_eng.extract_features(mapped_features)
+            feature_vector = np.array([v for v in ml_features.values()], dtype=np.float32).reshape(1, -1)
+            feature_names = list(ml_features.keys())
+            
+        else:
+            # Assume features are already processed or we can't process them
+            feature_vector = np.array([v for v in features.values()], dtype=np.float32).reshape(1, -1)
+            feature_names = list(features.keys())
+
+        shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
+        return shap_result
+    except Exception as e:
+        print(f"SHAP Error: {e}")
+        # Return empty structure instead of 500 to prevent frontend crash
+        return {
+            "shap_values": [],
+            "base_value": 0.0,
+            "feature_names": []
+        }
 
 
 if __name__ == "__main__":

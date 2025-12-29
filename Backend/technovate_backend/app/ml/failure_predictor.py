@@ -22,17 +22,53 @@ class FailurePredictor:
         Returns:
             SHAP values and base value
         """
-        import shap
-        if X.ndim == 1:
-            X = X.reshape(1, -1)
-        explainer = shap.TreeExplainer(self.model)
-        shap_values = explainer.shap_values(X)
-        base_value = explainer.expected_value
-        return {
-            "shap_values": shap_values.tolist(),
-            "base_value": base_value.tolist() if hasattr(base_value, 'tolist') else base_value,
-            "feature_names": feature_names if feature_names else None
-        }
+        try:
+            import shap
+        except ImportError:
+            return {
+                "shap_values": [[0.0] * X.shape[1]],
+                "base_value": 0.0,
+                "feature_names": feature_names,
+                "warning": "SHAP not installed"
+            }
+        
+        if not self.is_trained:
+            # Return dummy values if model is not trained yet
+            return {
+                "shap_values": [[0.0] * X.shape[1]],
+                "base_value": 0.0,
+                "feature_names": feature_names
+            }
+
+        try:
+            if X.ndim == 1:
+                X = X.reshape(1, -1)
+            explainer = shap.TreeExplainer(self.model)
+            shap_values = explainer.shap_values(X)
+            base_value = explainer.expected_value
+            
+            # Handle different return types from SHAP (list vs array)
+            if isinstance(shap_values, list):
+                # For binary classification, XGBoost might return list of [negative_shap, positive_shap]
+                # We usually want the positive class (index 1)
+                if len(shap_values) == 2:
+                    shap_values = shap_values[1]
+                else:
+                    shap_values = shap_values[0]
+
+            return {
+                "shap_values": shap_values.tolist(),
+                "base_value": base_value.tolist() if hasattr(base_value, 'tolist') else base_value,
+                "feature_names": feature_names if feature_names else None
+            }
+        except Exception as e:
+            print(f"SHAP calculation failed: {e}")
+            return {
+                "shap_values": [[0.0] * X.shape[1]],
+                "base_value": 0.0,
+                "feature_names": feature_names,
+                "warning": f"SHAP calculation failed: {str(e)}"
+            }
     
     def __init__(self):
         """Initialize failure predictor."""

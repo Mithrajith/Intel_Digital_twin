@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     rul_warning_hours: float = 100.0  # RUL warning threshold
     
     # API
-    cors_origins: list = ["*"]  # In production, specify frontend URL
+    cors_origins: list = ["*"]
     
     class Config:
         env_file = ".env"
