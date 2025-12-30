@@ -141,15 +141,23 @@ export function Overview() {
                 </div>
                 <div className="divide-y divide-border">
                     {health && health.alerts && health.alerts.length > 0 ? (
-                        health.alerts.slice(0, 3).map((alert, i) => (
-                            <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className={`h-2 w-2 rounded-full ${alert.type === 'critical' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-                                    <span className="text-sm">{alert.message}</span>
+                        health.alerts.slice(0, 3).map((alert, i) => {
+                            // Handle both string alerts (from REST API) and object alerts (if structure changes)
+                            const message = typeof alert === 'string' ? alert : alert.message;
+                            const isCritical = typeof alert === 'string' 
+                                ? message.toLowerCase().includes('critical') || message.toLowerCase().includes('failure')
+                                : alert.type === 'critical';
+                                
+                            return (
+                                <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-2 w-2 rounded-full ${isCritical ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                                        <span className="text-sm">{message}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">Just now</span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">Just now</span>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="p-4 text-center text-muted-foreground text-sm">
                             No recent alerts. System nominal.

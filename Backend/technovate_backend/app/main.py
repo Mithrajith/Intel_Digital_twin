@@ -405,10 +405,18 @@ async def get_machine_health():
     # Generate alerts
     alerts = []
     if anomaly_score > 0.7:
-        alerts.append("High anomaly score detected")
+        alerts.append("Critical anomaly score detected")
+    elif anomaly_score > 0.4:
+        alerts.append("Elevated anomaly score detected")
+        
     if failure_prob > 0.7:
         alerts.append("High failure probability")
-    if rul_hours < settings.rul_warning_hours:
+    elif failure_prob > 0.4:
+        alerts.append("Elevated failure risk")
+        
+    if rul_hours < 50:
+        alerts.append(f"Critical RUL: {rul_hours:.1f} hours remaining")
+    elif rul_hours < 100:
         alerts.append(f"Low RUL: {rul_hours:.1f} hours remaining")
     
     # Component health (per joint)
@@ -618,11 +626,19 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
             # Generate alerts for WebSocket
             alerts = []
             if anomaly_score > 0.7:
-                alerts.append({"type": "warning", "title": "Anomaly Detected", "message": f"High anomaly score: {anomaly_score:.2f}"})
+                alerts.append({"type": "critical", "title": "Critical Anomaly", "message": f"Critical anomaly score: {anomaly_score:.2f}"})
+            elif anomaly_score > 0.4:
+                alerts.append({"type": "warning", "title": "Potential Anomaly", "message": f"Elevated anomaly score: {anomaly_score:.2f}"})
+                
             if failure_prob > 0.7:
                 alerts.append({"type": "critical", "title": "Failure Imminent", "message": f"Failure probability: {failure_prob:.2f}"})
+            elif failure_prob > 0.4:
+                alerts.append({"type": "warning", "title": "Failure Risk", "message": f"Elevated failure risk: {failure_prob:.2f}"})
+                
             if rul_hours < 50:
-                alerts.append({"type": "warning", "title": "Low RUL", "message": f"Remaining Useful Life: {rul_hours:.1f} hours"})
+                alerts.append({"type": "critical", "title": "Critical RUL", "message": f"Remaining Useful Life critical: {rul_hours:.1f} hours"})
+            elif rul_hours < 100:
+                alerts.append({"type": "warning", "title": "Low RUL", "message": f"Remaining Useful Life low: {rul_hours:.1f} hours"})
             
             # Check sensor thresholds
             if data["temperature_core"] > 80:
