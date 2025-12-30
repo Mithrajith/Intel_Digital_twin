@@ -191,9 +191,16 @@ export function Logs() {
                         {sensorData[playbackIndex]?.timestamp || 'No data'}
                     </span>
                 </div>
-                <div className="bg-background rounded-lg p-4 border border-border">
+                <div className="bg-background rounded-lg p-4 border border-border h-[300px]">
                     {sensorData.length > 0 ? (
-                        <Line data={chartData} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
+                        <Line 
+                            data={chartData} 
+                            options={{ 
+                                responsive: true, 
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'top' } } 
+                            }} 
+                        />
                     ) : (
                         <div className="text-muted-foreground">No sensor data available for playback.</div>
                     )}
