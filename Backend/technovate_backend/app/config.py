@@ -34,7 +34,12 @@ class Settings(BaseSettings):
     rul_warning_hours: float = 100.0  # RUL warning threshold
     
     # API
-    cors_origins: list = ["*"]
+    cors_origins: list = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ]
     
     class Config:
         env_file = ".env"
