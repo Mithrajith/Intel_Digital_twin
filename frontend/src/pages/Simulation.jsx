@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Play, Pause, RotateCcw, Box, Zap, Layers, Activity } from 'lucide-react';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
+import { RobotScene } from '../components/3d/RobotArm';
 
 export function Simulation() {
     const [isPlaying, setIsPlaying] = useState(true);
@@ -9,8 +10,22 @@ export function Simulation() {
     // Get live data to drive the simulation
     const data = useSimulatedSensor(isPlaying, 50); // Faster update for smooth animation
 
-    const currentAngle = data.length > 0 ? data[data.length - 1].jointAngle : 45;
+    // Extract joint angles from data
     const latest = data.length > 0 ? data[data.length - 1] : {};
+    
+    // Map sensor data to joint angles (fallback to 0 if missing)
+    // Note: Backend sends 'joint_1_angle' etc. in raw object, but useSimulatedSensor might map it differently
+    // Let's check the raw data structure from useSimulatedSensor
+    const raw = latest.raw || {};
+    
+    const jointAngles = {
+        joint_1: raw.joint_1_angle || 0,
+        joint_2: raw.joint_2_angle || 0,
+        joint_3: raw.joint_3_angle || 0,
+        joint_4: raw.joint_4_angle || 0,
+        joint_5: raw.joint_5_angle || 0
+    };
+
     const temp = latest.temperature || 0;
     const vib = latest.vibration || 0;
     const torque = latest.torque || 0;
@@ -33,27 +48,6 @@ export function Simulation() {
             failureReason = "Gearbox Strain";
         }
     }
-
-    // Calculate arm position based on angle
-    // Simple 2-link arm kinematics for visualization
-    const origin = { x: 200, y: 300 };
-    const L1 = 120;
-    const L2 = 100;
-
-    // Angle for Link 1 (Base) - let's make it slowly oscillate or static
-    const theta1 = -90 * (Math.PI / 180); // Upward
-    const p1 = {
-        x: origin.x + L1 * Math.cos(theta1),
-        y: origin.y + L1 * Math.sin(theta1)
-    };
-
-    // Angle for Link 2 (Joint) - Driven by sensor data (offset by currentAngle)
-    // Map 0-90 degrees to physical angle
-    const theta2 = (currentAngle - 90) * (Math.PI / 180);
-    const p2 = {
-        x: p1.x + L2 * Math.cos(theta2 + theta1), // Relative to link 1
-        y: p1.y + L2 * Math.sin(theta2 + theta1)
-    };
 
     // Helper for colors
     const getPartColor = (partName, defaultColor) => {
@@ -97,79 +91,17 @@ export function Simulation() {
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-                {/* Main 3D/2D Viewport */}
-                <div className="lg:col-span-2 bg-black/40 rounded-lg border border-border relative overflow-hidden flex items-center justify-center">
-                    {/* Grid Background */}
-                    <div
-                        className="absolute inset-0 opacity-20"
-                        style={{
-                            backgroundImage: 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)',
-                            backgroundSize: '40px 40px'
-                        }}
-                    />
-
-                    <div className="relative z-10 w-full h-full flex items-center justify-center">
-                        <svg width="400" height="400" viewBox="0 0 400 400" className="overflow-visible">
-                            {/* Base */}
-                            <path d="M 150 350 L 250 350 L 230 300 L 170 300 Z" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-
-                            {/* Link 1 */}
-                            <line
-                                x1={origin.x} y1={origin.y}
-                                x2={p1.x} y2={p1.y}
-                                stroke="#4b5563"
-                                strokeWidth="20"
-                                strokeLinecap="round"
-                            />
-
-                            {/* Joint 1 (Motor) */}
-                            <circle 
-                                cx={origin.x} cy={origin.y} r="18" 
-                                fill={getPartColor('motor', '#374151')} 
-                                stroke="#9ca3af" strokeWidth="2"
-                                className={getPartClass('motor')}
-                            />
-                            <text x={origin.x + 25} y={origin.y} fill="white" fontSize="10" opacity="0.5">Base Motor</text>
-
-                            {/* Link 2 (The one moving) */}
-                            <line
-                                x1={p1.x} y1={p1.y}
-                                x2={p2.x} y2={p2.y}
-                                stroke={getPartColor('link2', '#4b5563')}
-                                strokeWidth="16"
-                                strokeLinecap="round"
-                                className={`transition-colors duration-300 ${getPartClass('link2')}`}
-                            />
-
-                            {/* Joint 2 */}
-                            <circle 
-                                cx={p1.x} cy={p1.y} r="14" 
-                                fill={getPartColor('joint2', '#374151')} 
-                                stroke="#9ca3af" strokeWidth="2" 
-                                className={getPartClass('joint2')}
-                            />
-                            <text x={p1.x + 20} y={p1.y} fill="white" fontSize="10" opacity="0.5">Elbow Joint</text>
-
-                            {/* End Effector */}
-                            <circle cx={p2.x} cy={p2.y} r="8" fill="#ef4444" />
-
-                            {/* Failure Indicator Label on Model */}
-                            {failingPart && (
-                                <g>
-                                    <rect x="280" y="50" width="110" height="60" rx="4" fill="rgba(239, 68, 68, 0.2)" stroke="#ef4444" />
-                                    <text x="290" y="70" fill="#ef4444" fontWeight="bold" fontSize="12">⚠ FAILURE RISK</text>
-                                    <text x="290" y="90" fill="white" fontSize="10">Part: {failingPart.toUpperCase()}</text>
-                                    <text x="290" y="102" fill="white" fontSize="10">Reason: {failureReason}</text>
-                                </g>
-                            )}
-                        </svg>
-                    </div>
-
+                {/* Main 3D Viewport */}
+                <div className="lg:col-span-2 bg-black/40 rounded-lg border border-border relative overflow-hidden flex items-center justify-center min-h-[500px]">
+                    <RobotScene jointAngles={jointAngles} />
+                    
                     {/* Overlay Info */}
-                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm p-3 rounded-md border border-white/10 text-xs font-mono">
-                        <div>FPS: 60</div>
-                        <div>Physics: Active</div>
-                        <div>Sync: <span className="text-green-500">Live</span></div>
+                    <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm p-2 rounded text-xs text-white font-mono">
+                        <div>J1: {jointAngles.joint_1.toFixed(1)}°</div>
+                        <div>J2: {jointAngles.joint_2.toFixed(1)}°</div>
+                        <div>J3: {jointAngles.joint_3.toFixed(1)}°</div>
+                        <div>J4: {jointAngles.joint_4.toFixed(1)}°</div>
+                        <div>J5: {jointAngles.joint_5.toFixed(1)}°</div>
                     </div>
                 </div>
 
@@ -222,8 +154,12 @@ export function Simulation() {
                         </h3>
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Joint Angle</span>
-                                <span className="font-mono">{currentAngle.toFixed(1)}°</span>
+                                <span className="text-muted-foreground">Joint 1 Angle</span>
+                                <span className="font-mono">{jointAngles.joint_1.toFixed(1)}°</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Joint 2 Angle</span>
+                                <span className="font-mono">{jointAngles.joint_2.toFixed(1)}°</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Angular Velocity</span>

@@ -1,7 +1,8 @@
 """FastAPI application for Technovate Digital Twin backend."""
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio
 import time
@@ -248,6 +249,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve URDF and Meshes
+@app.get("/urdf")
+async def get_urdf():
+    """Serve the URDF file directly."""
+    if not settings.urdf_path.exists():
+        raise HTTPException(status_code=404, detail="URDF file not found")
+    return FileResponse(str(settings.urdf_path), media_type='application/xml')
+
+# Try to locate meshes directory relative to URDF
+# Assuming standard structure: .../package_name/urdf/robot.urdf and .../package_name/meshes/
+meshes_path = settings.urdf_path.parent.parent / "meshes"
+if meshes_path.exists():
+    app.mount("/meshes", StaticFiles(directory=str(meshes_path)), name="meshes")
 
 
 @app.get("/")
