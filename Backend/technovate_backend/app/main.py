@@ -39,6 +39,7 @@ class AppState:
     rul_estimator: RULEstimator = None
     sensor_logs: list = []
     system_logs: list = []
+    last_alert_log_time: dict = {}  # Track last log time for alerts to prevent flooding
     is_running: bool = False
     simulation_task: asyncio.Task = None
 
@@ -104,12 +105,29 @@ async def lifespan(app: FastAPI):
             sensor_data = state.sensor_gen.generate()
             
             # Extract features
-            features = state.feature_eng.extract_features({
-                'temperature_core': sensor_data.overall_vibration,  # Using vibration as proxy
-                'vibration_level': sensor_data.overall_vibration,
-                'power_consumption': sensor_data.power_consumption,
-                'joint_1_angle': state.simulator.get_joint_states()[0].angle if state.simulator.get_joint_states() else 0,
-            })
+            # Use same feature set as get_machine_health
+            joint_states = state.simulator.get_joint_states()
+            num_joints = len(joint_states)
+            if num_joints > 0:
+                avg_temp = sum(sensor_data.joint_temperatures.values()) / len(sensor_data.joint_temperatures)
+                avg_velocity = sum(abs(js.velocity) for js in joint_states) / num_joints
+                avg_torque = sum(abs(js.torque) for js in joint_states) / num_joints
+            else:
+                avg_temp = 25.0
+                avg_velocity = 0.0
+                avg_torque = 0.0
+
+            current_features = {
+                'temperature': avg_temp,
+                'vibration': sensor_data.overall_vibration,
+                'power': sensor_data.power_consumption,
+                'velocity': avg_velocity,
+                'torque': avg_torque,
+            }
+            
+            # Add to feature engineer to update buffers
+            state.feature_eng.add_sample(current_features)
+            features = state.feature_eng.extract_features(current_features)
             
             if features is not None:
                 X_train.append(features)
@@ -119,14 +137,25 @@ async def lifespan(app: FastAPI):
                 y_rul.append(np.random.uniform(0, 1000))
         
         if X_train:
-            X_train = np.array(X_train)
+            # Prepare features for ML (scaling)
+            # We need to fit the scaler on the whole dataset
+            df_train = pd.DataFrame(X_train)
+            df_train = df_train.fillna(0)
+            
+            # Fit scaler
+            state.feature_eng.scaler.fit(df_train)
+            state.feature_eng.is_fitted = True
+            
+            # Transform
+            X_train_scaled = state.feature_eng.scaler.transform(df_train)
+            
             y_failure = np.array(y_failure)
             y_rul = np.array(y_rul)
             
             # Train models
-            state.anomaly_detector.train(X_train)
-            state.failure_predictor.train(X_train, y_failure)
-            state.rul_estimator.train(X_train, y_rul)
+            state.anomaly_detector.train(X_train_scaled)
+            state.failure_predictor.train(X_train_scaled, y_failure)
+            state.rul_estimator.train(X_train_scaled, y_rul)
             
             # Save models
             state.anomaly_detector.save()
@@ -325,12 +354,22 @@ async def get_machine_health():
     joint_states = state.simulator.get_joint_states()
     
     # Prepare features
+    num_joints = len(joint_states)
+    if num_joints > 0:
+        avg_temp = sum(sensor_data.joint_temperatures.values()) / len(sensor_data.joint_temperatures)
+        avg_velocity = sum(abs(js.velocity) for js in joint_states) / num_joints
+        avg_torque = sum(abs(js.torque) for js in joint_states) / num_joints
+    else:
+        avg_temp = 25.0
+        avg_velocity = 0.0
+        avg_torque = 0.0
+
     current_features = {
-        'temperature': sum(sensor_data.joint_temperatures.values()) / len(sensor_data.joint_temperatures),
+        'temperature': avg_temp,
         'vibration': sensor_data.overall_vibration,
         'power': sensor_data.power_consumption,
-        'velocity': sum(abs(js.velocity) for js in joint_states) / len(joint_states),
-        'torque': sum(abs(js.torque) for js in joint_states) / len(joint_states),
+        'velocity': avg_velocity,
+        'torque': avg_torque,
     }
     
     # Add to feature engineer
@@ -462,6 +501,13 @@ async def get_logs():
     return sorted(state.system_logs, key=lambda x: x.timestamp, reverse=True)
 
 
+@app.get("/sensor-data")
+async def get_sensor_data():
+    """Get historical sensor data for playback."""
+    # Return sensor logs sorted by timestamp
+    return sorted(state.sensor_logs, key=lambda x: x['timestamp'])
+
+
 @app.get("/logs/export")
 async def export_logs(start_time: float = None, end_time: float = None):
     """Export sensor logs as CSV."""
@@ -540,7 +586,6 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
                 "power": data["power_consumption"],
                 "velocity": avg_velocity,
                 "torque": avg_torque,
-                "angle": avg_angle
             }
 
             # Add sample to rolling buffer
@@ -589,6 +634,27 @@ async def websocket_machine_stream(websocket: WebSocket, machine_id: str):
                 alerts.append({"type": "critical", "title": "High Vibration", "message": f"Vibration level critical: {data['vibration_level']:.2f}g"})
 
             data["alerts"] = alerts
+
+            # Log alerts to system logs (with deduplication)
+            current_time = time.time()
+            for alert in alerts:
+                # Create a unique key for the alert
+                alert_key = f"{alert['title']}:{alert['message']}"
+                
+                # Check if we should log this alert (e.g., if it hasn't been logged in the last 10 seconds)
+                last_logged = state.last_alert_log_time.get(alert_key, 0)
+                if current_time - last_logged > 10.0:
+                    # Log it
+                    state.system_logs.append(Log(
+                        id=len(state.system_logs) + 1,
+                        timestamp=current_time * 1000,
+                        event=f"{alert['title']}: {alert['message']}",
+                        type="error" if alert['type'] == 'critical' else "warning",
+                        user="System",
+                        machine_id=machine_id
+                    ))
+                    # Update last logged time
+                    state.last_alert_log_time[alert_key] = current_time
 
             # Debug: print outgoing data for troubleshooting
             print('WebSocket send:', data)
@@ -641,14 +707,21 @@ async def explain_failure(features: dict = Body(...)):
                 "power": features.get("power_consumption", 0.0),
                 "velocity": avg_velocity,
                 "torque": avg_torque,
-                "angle": avg_angle
             }
             
             # Use FeatureEngineer to get full feature vector (using current history)
             # Note: This uses the global state's history, which is correct for "explain current state"
             ml_features = state.feature_eng.extract_features(mapped_features)
-            feature_vector = np.array([v for v in ml_features.values()], dtype=np.float32).reshape(1, -1)
-            feature_names = list(ml_features.keys())
+            
+            # Use prepare_for_ml to get scaled features (matching training data distribution)
+            scaled_features = state.feature_eng.prepare_for_ml(ml_features)
+            feature_vector = scaled_features.reshape(1, -1)
+            
+            # Get feature names from the scaler to ensure correct order matching the vector
+            if hasattr(state.feature_eng.scaler, 'feature_names_in_'):
+                feature_names = list(state.feature_eng.scaler.feature_names_in_)
+            else:
+                feature_names = list(ml_features.keys())
             
         else:
             # Assume features are already processed or we can't process them
@@ -656,6 +729,12 @@ async def explain_failure(features: dict = Body(...)):
             feature_names = list(features.keys())
 
         shap_result = state.failure_predictor.shap_explain(feature_vector, feature_names=feature_names)
+        
+        # Debug logging
+        print(f"SHAP Input Features: {feature_names}")
+        print(f"SHAP Input Vector: {feature_vector}")
+        print(f"SHAP Result: {shap_result}")
+        
         return shap_result
     except Exception as e:
         print(f"SHAP Error: {e}")

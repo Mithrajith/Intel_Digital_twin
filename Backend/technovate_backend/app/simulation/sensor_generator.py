@@ -89,7 +89,10 @@ class SensorGenerator:
             total_power += power
         
         # Overall vibration (RMS of all joints)
-        overall_vibration = float(np.sqrt(total_vibration / len(joint_states)))
+        if joint_states:
+            overall_vibration = float(np.sqrt(total_vibration / len(joint_states)))
+        else:
+            overall_vibration = 0.0
         
         return SensorData(
             timestamp=timestamp,

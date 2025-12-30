@@ -6,6 +6,19 @@ export function ControlPanel() {
     const [isRunning, setIsRunning] = useState(true);
     const [alerts, setAlerts] = useState([]);
 
+    const handleAlert = (variant, message) => {
+        const newAlert = {
+            id: Date.now(),
+            variant: variant,
+            title: variant === 'critical' ? 'Critical Error' : 'System Alert',
+            message: message,
+            timestamp: new Date().toLocaleTimeString()
+        };
+        setAlerts(prev => [newAlert, ...prev]);
+    };
+
+    const clearAlerts = () => setAlerts([]);
+
     const sendCommand = async (command, parameters = {}) => {
         try {
             const response = await fetch('http://localhost:8000/machine/control', {

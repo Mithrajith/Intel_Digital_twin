@@ -74,17 +74,6 @@ export function Dashboard() {
             };
             fetchSHAP(features);
         }
-        // Map frontend data to backend feature names
-        // Backend expects: temperature, vibration, power, velocity, torque, angle
-        const features = {
-            angle: latestData.jointAngle || 0,
-            temperature: latestData.temperature || 0,
-            vibration: latestData.vibration || 0,
-            power: latestData.torque || 0, // In useSimulatedSensor, torque is mapped from power/load
-            torque: latestData.torque || 0, // Using same value for proxy
-            velocity: 0 // Velocity not visualized in this dashboard card set
-        };
-        fetchSHAP(features);
     };
 
     return (
