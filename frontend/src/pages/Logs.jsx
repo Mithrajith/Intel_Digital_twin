@@ -23,7 +23,7 @@ export function Logs() {
         // Fetch sensor data for playback
         const fetchSensorData = async () => {
             try {
-                const response = await fetch('http://localhost:8000/sensor-data');
+                const response = await fetch('http://localhost:7000/sensor-data');
                 if (response.ok) {
                     const data = await response.json();
                     setSensorData(data);
@@ -102,8 +102,8 @@ export function Logs() {
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            // Fetch from Main Backend (8000) - Real System Logs
-            const response = await fetch(`http://localhost:8000/logs?_t=${new Date().getTime()}`);
+            // Fetch from Main Backend (7000) - Real System Logs
+            const response = await fetch(`http://localhost:7000/logs?_t=${new Date().getTime()}`);
             if (response.ok) {
                 const data = await response.json();
                 setLogs(data);
@@ -142,8 +142,8 @@ export function Logs() {
     });
 
     const handleExportCSV = () => {
-        // Use the Main Backend (8000) for exporting sensor logs
-        window.location.href = `http://localhost:8000/logs/export?start_time=${startDate ? new Date(startDate).getTime() / 1000 : ''}&end_time=${endDate ? new Date(endDate).getTime() / 1000 : ''}`;
+        // Use the Main Backend (7000) for exporting sensor logs
+        window.location.href = `http://localhost:7000/logs/export?start_time=${startDate ? new Date(startDate).getTime() / 1000 : ''}&end_time=${endDate ? new Date(endDate).getTime() / 1000 : ''}`;
     };
 
     const handleExportJSON = () => {

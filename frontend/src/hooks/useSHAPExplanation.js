@@ -9,7 +9,7 @@ export function useSHAPExplanation() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/explain/failure', {
+      const response = await fetch('http://localhost:7000/explain/failure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(features),

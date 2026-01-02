@@ -14,15 +14,15 @@ export function Overview() {
         const fetchData = async () => {
             try {
                 // Fetch Machine State
-                const stateRes = await fetch('http://localhost:8000/machine/state');
+                const stateRes = await fetch('http://localhost:7000/machine/state');
                 if (stateRes.ok) setState(await stateRes.json());
 
                 // Fetch Health Prediction
-                const healthRes = await fetch('http://localhost:8000/machine/health');
+                const healthRes = await fetch('http://localhost:7000/machine/health');
                 if (healthRes.ok) setHealth(await healthRes.json());
 
                 // Fetch Recent Logs
-                const logsRes = await fetch('http://localhost:8000/logs?limit=3');
+                const logsRes = await fetch('http://localhost:7000/logs?limit=3');
                 if (logsRes.ok) setLogs(await logsRes.json());
 
             } catch (error) {

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Play, Pause, Activity, Zap, Thermometer, Wifi, Server } from 'lucide-react';
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { MetricCard } from '../components/common/MetricCard';
+import { MachineTypeSelector } from '../components/common/MachineTypeSelector';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
+import { getMachineTypeConfig } from '../config/machineTypes';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { SHAPBarChart } from '../components/charts/SHAPBarChart';
@@ -18,6 +20,10 @@ export function Dashboard() {
     const { refreshRate } = useChartRefreshRate();
     const [machines, setMachines] = useState([]);
     const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
+    const [selectedMachineType, setSelectedMachineType] = useState('robotic_arm_2axis');
+
+    // Get machine type configuration
+    const machineConfig = getMachineTypeConfig(selectedMachineType);
 
     const data = useSimulatedSensor(isPlaying, refreshRate, selectedMachineId);
 
@@ -25,7 +31,7 @@ export function Dashboard() {
         // Fetch available machines from backend only
         const fetchMachines = async () => {
             try {
-                const response = await fetch('http://localhost:8000/machines');
+                const response = await fetch('http://localhost:7000/machines');
                 if (response.ok) {
                     const machineList = await response.json();
                     setMachines(machineList);
@@ -83,40 +89,50 @@ export function Dashboard() {
                     <h1 className="text-3xl font-bold tracking-tight">AI Predictive Health</h1>
                     <p className="text-muted-foreground mt-1">Real-time AI analysis & sensor telemetry from {selectedMachineId}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
-                        <Server className="h-4 w-4 ml-2 text-blue-500" />
-                        {machines.length > 0 ? (
-                            <select
-                                value={selectedMachineId}
-                                onChange={(e) => {
-                                    setSelectedMachineId(e.target.value);
-                                    setIsPlaying(false); // Stop stream when changing machine
-                                }}
-                                className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8 text-blue-700 font-medium"
-                            >
-                                {machines.map(m => (
-                                    <option key={m.id} value={m.id}>
-                                        {m.id.toUpperCase()} ({m.type.replace('_', ' ')})
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
-                            <span className="text-red-500 text-sm ml-2">No machines available</span>
-                        )}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
+                    {/* Machine Type Selector */}
+                    <div className="min-w-[300px]">
+                        <MachineTypeSelector 
+                            selectedMachineType={selectedMachineType}
+                            onMachineTypeChange={setSelectedMachineType}
+                        />
                     </div>
+                    
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
+                            <Server className="h-4 w-4 ml-2 text-blue-500" />
+                            {machines.length > 0 ? (
+                                <select
+                                    value={selectedMachineId}
+                                    onChange={(e) => {
+                                        setSelectedMachineId(e.target.value);
+                                        setIsPlaying(false); // Stop stream when changing machine
+                                    }}
+                                    className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer py-1 pr-8 text-blue-700 font-medium"
+                                >
+                                    {machines.map(m => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.id.toUpperCase()} ({m.type.replace('_', ' ')})
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <span className="text-red-500 text-sm ml-2">No machines available</span>
+                            )}
+                        </div>
 
-                    <button
-                        onClick={() => setIsPlaying(!isPlaying)}
-                        className={cn(
-                            "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
-                            isPlaying
-                                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                                : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
-                        )}
-                    >
-                        {isPlaying ? <><Pause className="h-4 w-4" /> Stop Stream</> : <><Play className="h-4 w-4" /> Start Stream</>}
-                    </button>
+                        <button
+                            onClick={() => setIsPlaying(!isPlaying)}
+                            className={cn(
+                                "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+                                isPlaying
+                                    ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                                    : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                            )}
+                        >
+                            {isPlaying ? <><Pause className="h-4 w-4" /> Stop Stream</> : <><Play className="h-4 w-4" /> Start Stream</>}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -146,31 +162,16 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <MetricCard
-                    title="Joint Angle"
-                    value={getLatestValue('jointAngle')}
-                    unit="°"
-                    status="neutral"
-                />
-                <MetricCard
-                    title="Motor Torque"
-                    value={getLatestValue('torque')}
-                    unit="Nm"
-                    icon={Zap}
-                />
-                <MetricCard
-                    title="Temperature"
-                    value={getLatestValue('temperature')}
-                    unit="°C"
-                    icon={Thermometer}
-                    status={Number(getLatestValue('temperature')) > 50 ? 'warning' : 'neutral'}
-                />
-                <MetricCard
-                    title="Vibration"
-                    value={getLatestValue('vibration')}
-                    unit="g"
-                    icon={Activity}
-                />
+                {Object.entries(machineConfig.sensors).map(([key, sensor], index) => (
+                    <MetricCard
+                        key={key}
+                        title={sensor.label}
+                        value={getLatestValue(sensor.dataKey)}
+                        unit={sensor.unit}
+                        icon={sensor.icon}
+                        status={sensor.threshold && Number(getLatestValue(sensor.dataKey)) > sensor.threshold ? 'warning' : 'neutral'}
+                    />
+                ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -6,8 +6,8 @@ This script guides you through a presentation of the Intel Digital Twin project.
 
 Ensure all 3 components are running in separate terminals:
 
-1.  **Technovate Backend (Analysis)**: `uvicorn app.main:app --reload --port 8000` (in `Backend/technovate_backend`)
-2.  **Demo Server (Physical Mock)**: `uvicorn main:app --reload --port 8001` (in `Backend/demo_machine_server`)
+1.  **Technovate Backend (Analysis)**: `uvicorn app.main:app --reload --port 7000` (in `Backend/technovate_backend`)
+2.  **Demo Server (Physical Mock)**: `uvicorn main:app --reload --port 8001` (in `Backend/mock_generator`)
 3.  **Frontend**: `npm run dev` (in `frontend`)
 
 ---

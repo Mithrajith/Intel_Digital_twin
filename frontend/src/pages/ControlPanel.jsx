@@ -21,7 +21,7 @@ export function ControlPanel() {
 
     const sendCommand = async (command, parameters = {}) => {
         try {
-            const response = await fetch('http://localhost:8000/machine/control', {
+            const response = await fetch('http://localhost:7000/machine/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -45,7 +45,7 @@ export function ControlPanel() {
 
     const injectFault = async (type, severity) => {
         try {
-            await fetch('http://localhost:8000/machine/control', {
+            await fetch('http://localhost:7000/machine/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -45,8 +45,8 @@ This will:
 ```bash
 cd Backend/technovate_backend
 ./setup.sh
-source .venv/bin/activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+source venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 7000
 ```
 
 ### Frontend Only
@@ -79,7 +79,7 @@ npm run dev
 ## 🔗 Integration Points
 
 ### Dashboard Page
-- Connects to `ws://localhost:8000/ws/machines/armpi_fpv_01`
+- Connects to `ws://localhost:7000/ws/machines/armpi_fpv_01`
 - Displays 4 live charts (angle, torque, temp, vibration)
 - Fetches machine list from `/machines`
 
@@ -104,13 +104,13 @@ npm run dev
 ### Test Backend
 ```bash
 # Check API
-curl http://localhost:8000/machines | jq
+curl http://localhost:7000/machines | jq
 
 # Test WebSocket (using websocat)
-websocat ws://localhost:8000/ws/machines/armpi_fpv_01
+websocat ws://localhost:7000/ws/machines/armpi_fpv_01
 
 # Export logs
-curl http://localhost:8000/logs/export -o logs.csv
+curl http://localhost:7000/logs/export -o logs.csv
 ```
 
 ### Test Frontend
@@ -173,19 +173,19 @@ Simulation → Sensor Generator → WebSocket → Frontend Charts
 ### Backend won't start
 ```bash
 cd Backend/technovate_backend
-source .venv/bin/activate
+source venv/bin/activate
 python -c "import fastapi; print('OK')"
 ```
 
 ### Frontend can't connect
-- Check backend is running on port 8000
+- Check backend is running on port 7000
 - Check CORS is enabled (already configured)
 - Check WebSocket URL in browser console
 
 ### No ML predictions
 ```bash
 cd Backend/technovate_backend
-source .venv/bin/activate
+source venv/bin/activate
 python train_models.py
 ```
 
@@ -199,7 +199,7 @@ python train_models.py
 
 ## 🎉 Success Criteria
 
-✅ Backend running on port 8000
+✅ Backend running on port 7000
 ✅ Frontend running on port 5173
 ✅ WebSocket connected (check browser console)
 ✅ Live charts updating on Dashboard

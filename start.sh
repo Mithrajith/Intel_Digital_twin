@@ -15,26 +15,30 @@ NC='\033[0m' # No Color
 
 # Backend setup
 echo -e "${BLUE}[1/3] Setting up Backend...${NC}"
-cd Backend/technovate_backend
+cd Backend
 
-if [ ! -d ".venv" ]; then
+if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
-    python -m venv .venv
+    python -m venv venv
 fi
 
 echo "Activating virtual environment..."
-source .venv/bin/activate
+source venv/bin/activate
 
 echo "Installing dependencies..."
-.venv/bin/pip install --quiet --upgrade pip
-.venv/bin/pip install --quiet fastapi 'uvicorn[standard]' pydantic pydantic-settings \
+venv/bin/pip install --quiet --upgrade pip
+venv/bin/pip install --quiet fastapi 'uvicorn[standard]' pydantic pydantic-settings \
     numpy pandas scikit-learn xgboost python-multipart joblib pytest websockets
 
 # Copy URDF if needed
 if [ ! -f "data/urdf/armpi_fpv.urdf" ]; then
     echo "Copying URDF file..."
     mkdir -p data/urdf
-    cp ../digital_twin_robot/robot_digital_twin/3d_model_urdf_files/armpi_fpv.urdf data/urdf/
+    if [ -f "create_multibody_from_urdf/armpi_fpv/armpi_fpv.urdf" ]; then
+        cp create_multibody_from_urdf/armpi_fpv/armpi_fpv.urdf data/urdf/
+    else
+        echo "Warning: URDF source file not found, checking data/urdf/ directory..."
+    fi
 fi
 
 # Train models if needed
@@ -50,7 +54,7 @@ echo ""
 
 # Frontend setup
 echo -e "${BLUE}[2/3] Setting up Frontend...${NC}"
-cd ../../frontend
+cd ../frontend
 
 if [ ! -d "node_modules" ]; then
     echo "Installing frontend dependencies..."
@@ -65,23 +69,23 @@ echo ""
 # Start services
 echo -e "${BLUE}[3/3] Starting Services...${NC}"
 echo ""
-echo "Starting backend server on http://localhost:8000"
+echo "Starting backend server on http://localhost:7000"
 echo "Starting frontend server on http://localhost:5173"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo ""
 
 # Start backend in background
-cd ../Backend/technovate_backend
-source .venv/bin/activate
-uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+cd ../Backend
+source venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 7000 &
 BACKEND_PID=$!
 
 # Wait for backend to start
 sleep 3
 
 # Start frontend
-cd ../../frontend
+cd ../frontend
 npm run dev &
 FRONTEND_PID=$!
 
@@ -94,8 +98,8 @@ echo -e "${GREEN}✓ All services running!${NC}"
 echo "=========================================="
 echo ""
 echo "🌐 Frontend:  http://localhost:5173"
-echo "🔧 Backend:   http://localhost:8000"
-echo "📚 API Docs:  http://localhost:8000/docs"
+echo "🔧 Backend:   http://localhost:7000"
+echo "📚 API Docs:  http://localhost:7000/docs"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo ""

@@ -10,7 +10,8 @@ import {
     FileText,
     AlertTriangle,
     Info,
-    Settings
+    Settings,
+    Layers
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -23,6 +24,7 @@ const navItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Activity, label: 'Machine Overview', path: '/overview' },
     { icon: LineChart, label: 'Live Dashboard', path: '/dashboard' },
+    { icon: Layers, label: 'Comprehensive Suite', path: '/comprehensive' },
     { icon: BrainCircuit, label: 'AI Predictions', path: '/predictions' },
     { icon: Box, label: 'Simulation', path: '/simulation' },
     { icon: Sliders, label: 'Control Panel', path: '/control' },

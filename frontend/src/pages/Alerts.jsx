@@ -20,7 +20,7 @@ export function Alerts() {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const response = await fetch('http://localhost:8000/logs');
+                const response = await fetch('http://localhost:7000/logs');
                 if (response.ok) {
                     const logs = await response.json();
                     // Filter logs that look like alerts or errors

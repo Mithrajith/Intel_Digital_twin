@@ -17,7 +17,7 @@ export function Predictions() {
     useEffect(() => {
         const fetchHealth = async () => {
             try {
-                const response = await fetch('http://localhost:8000/machine/health');
+                const response = await fetch('http://localhost:7000/machine/health');
                 if (response.ok) {
                     const data = await response.json();
                     setHealthData(data);

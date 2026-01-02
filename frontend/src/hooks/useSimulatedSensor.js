@@ -26,8 +26,8 @@ export function useSimulatedSensor(isPlaying = true, updateInterval = 1000, mach
                 wsRef.current.close();
             }
 
-            console.log(`Attempting to connect to ws://localhost:8000/ws/machines/${machineId}`);
-            const ws = new WebSocket(`ws://localhost:8000/ws/machines/${machineId}`);
+            console.log(`Attempting to connect to ws://localhost:7000/ws/machines/${machineId}`);
+            const ws = new WebSocket(`ws://localhost:7000/ws/machines/${machineId}`);
 
             ws.onopen = () => {
                 if (!isActive) {
