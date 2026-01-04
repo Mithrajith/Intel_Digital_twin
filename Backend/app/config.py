@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # Simulation
     simulation_frequency: float = 10.0  # Hz
     rom_reduction_factor: int = 10  # Reduce timesteps by this factor
+    use_real_data: bool = True
+    real_data_path: Path = data_dir / "real_data.csv"
     
     # Sensor parameters
     base_temperature: float = 25.0  # Celsius

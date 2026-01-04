@@ -1,4 +1,5 @@
 """FastAPI application for Technovate Digital Twin backend."""
+# Trigger reload for data update
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
@@ -19,6 +20,7 @@ from .models.schemas import (
 )
 from .simulation.urdf_parser import URDFParser
 from .simulation.physics_sim import PhysicsSimulator
+from .simulation.real_data_sim import RealDataSimulator
 from .simulation.sensor_generator import SensorGenerator
 from .simulation.rom import ReducedOrderModel
 from .ml.preprocessing import FeatureEngineer
@@ -77,7 +79,13 @@ async def lifespan(app: FastAPI):
     print(f"Loaded URDF: {state.urdf_parser.robot_name}")
     
     # Initialize simulation
-    state.simulator = PhysicsSimulator(state.urdf_parser, settings.simulation_frequency)
+    if settings.use_real_data:
+        print(f"Using Real Data Simulator from {settings.real_data_path}")
+        state.simulator = RealDataSimulator(state.urdf_parser, settings.real_data_path, settings.simulation_frequency)
+    else:
+        print("Using Synthetic Physics Simulator")
+        state.simulator = PhysicsSimulator(state.urdf_parser, settings.simulation_frequency)
+        
     state.sensor_gen = SensorGenerator(state.simulator)
     state.rom = ReducedOrderModel(settings.rom_reduction_factor)
     print("Simulation initialized")

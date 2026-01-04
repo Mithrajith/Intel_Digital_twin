@@ -19,11 +19,11 @@ export function Simulation() {
     const raw = latest.raw || {};
     
     const jointAngles = {
-        joint_1: raw.joint_1_angle || 0,
-        joint_2: raw.joint_2_angle || 0,
-        joint_3: raw.joint_3_angle || 0,
-        joint_4: raw.joint_4_angle || 0,
-        joint_5: raw.joint_5_angle || 0
+        joint_1: raw.joint_1_angle !== undefined ? raw.joint_1_angle : 0,
+        joint_2: raw.joint_2_angle !== undefined ? raw.joint_2_angle : -15,
+        joint_3: raw.joint_3_angle !== undefined ? raw.joint_3_angle : 45,
+        joint_4: raw.joint_4_angle !== undefined ? raw.joint_4_angle : 30,
+        joint_5: raw.joint_5_angle !== undefined ? raw.joint_5_angle : 0
     };
 
     const temp = latest.temperature || 0;
