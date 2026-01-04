@@ -2,10 +2,7 @@
 const CACHE_NAME = 'technovate-v1.0.0';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json',
-  '/favicon.ico'
+  '/manifest.json'
 ];
 
 // Install event - cache resources
