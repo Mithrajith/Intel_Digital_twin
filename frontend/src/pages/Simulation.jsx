@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Box, Zap, Layers, Activity } from 'lucide-react
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 import { RobotScene } from '../components/3d/RobotArm';
+import { MultiScenarioSimulation } from '../components/simulation/MultiScenarioSimulation';
 
 export function Simulation() {
     const [isPlaying, setIsPlaying] = useState(true);
@@ -188,6 +189,11 @@ export function Simulation() {
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            {/* Multi-Scenario Simulation Section */}
+            <div className="mt-6">
+                <MultiScenarioSimulation machineId="robot_01" />
             </div>
         </div>
     );

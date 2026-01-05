@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Play, Pause, Activity, Zap, Thermometer, Wifi, Server } from 'lucide-react';
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { MetricCard } from '../components/common/MetricCard';
-import { MachineTypeSelector } from '../components/common/MachineTypeSelector';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
-import { getMachineTypeConfig } from '../config/machineTypes';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { SHAPBarChart } from '../components/charts/SHAPBarChart';
 import { useSHAPExplanation } from '../hooks/useSHAPExplanation';
+import { AnalyticsSection } from '../components/analytics/AnalyticsSection';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -19,13 +18,20 @@ export function Dashboard() {
     const [isPlaying, setIsPlaying] = useState(true);
     const { refreshRate } = useChartRefreshRate();
     const [machines, setMachines] = useState([]);
-    const [selectedMachineId, setSelectedMachineId] = useState('robot_01');
-    const [selectedMachineType, setSelectedMachineType] = useState('robotic_arm_2axis');
-
-    // Get machine type configuration
-    const machineConfig = getMachineTypeConfig(selectedMachineType);
+    const [selectedMachineId, setSelectedMachineId] = useState('armpi_fpv_01');
+    const [healthData, setHealthData] = useState(null);
+    const [shapData, setSHAPData] = useState(null);
 
     const data = useSimulatedSensor(isPlaying, refreshRate, selectedMachineId);
+    const { shap, loading: shapLoading, error: shapError, fetchSHAP } = useSHAPExplanation();
+
+    // Static sensor configuration
+    const sensors = {
+        temperature: { label: 'Temperature', dataKey: 'temperature', unit: '°C', threshold: 60 },
+        vibration: { label: 'Vibration', dataKey: 'vibration', unit: 'g', threshold: 2.5 },
+        torque: { label: 'Torque', dataKey: 'torque', unit: 'Nm', threshold: 35 },
+        jointAngle: { label: 'Joint Angle', dataKey: 'jointAngle', unit: '°', threshold: 80 }
+    };
 
     useEffect(() => {
         // Fetch available machines from backend only
@@ -36,7 +42,6 @@ export function Dashboard() {
                     const machineList = await response.json();
                     setMachines(machineList);
                 } else {
-                    // Fallback if backend is offline
                     console.error("Backend offline, no machines available");
                     setMachines([]);
                 }
@@ -45,8 +50,39 @@ export function Dashboard() {
                 setMachines([]);
             }
         };
+
+        // Fetch health data for predictions
+        const fetchHealthData = async () => {
+            try {
+                const response = await fetch('http://localhost:7000/machine/health');
+                if (response.ok) {
+                    const health = await response.json();
+                    setHealthData(health);
+                    
+                    // Fetch SHAP explanations if we have sensor data
+                    if (data.length > 0) {
+                        const latest = data[data.length - 1];
+                        fetchSHAP({
+                            temperature: latest.temperature || 25,
+                            vibration: latest.vibration || 0,
+                            power: latest.power || 0,
+                            velocity: latest.velocity || 0,
+                            torque: latest.torque || 0
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch health data", error);
+            }
+        };
+
         fetchMachines();
-    }, []);
+        fetchHealthData();
+        
+        // Poll health data regularly
+        const healthInterval = setInterval(fetchHealthData, 5000);
+        return () => clearInterval(healthInterval);
+    }, [data, fetchSHAP]);
 
     const [visibleSensors, setVisibleSensors] = useState({
         jointAngle: true,
@@ -60,23 +96,29 @@ export function Dashboard() {
     };
 
     const getLatestValue = (key) => {
-        if (data.length === 0) return 0;
-        return Number(data[data.length - 1][key]).toFixed(2);
+        if (data.length === 0) return "--";
+        const latest = data[data.length - 1];
+        const value = latest[key];
+        if (value === undefined || value === null || isNaN(value)) return "--";
+        return Number(value).toFixed(2);
     };
 
-    // SHAP explainability
-    const { shap, loading: shapLoading, error: shapError, fetchSHAP } = useSHAPExplanation();
+    const getHealthValue = (key, fallback = "--") => {
+        if (!healthData) return fallback;
+        const value = healthData[key];
+        if (value === undefined || value === null || isNaN(value)) return fallback;
+        return value;
+    };
 
     const handleExplain = () => {
         if (data.length > 0) {
             const latestData = data[data.length - 1];
-            // Use raw data if available (from WebSocket), otherwise construct from mapped fields
-            // Send full raw data so backend can reconstruct all features (including joint velocities/torques)
             const features = latestData.raw ? latestData.raw : {
-                temperature_core: latestData.temperature,
-                vibration_level: latestData.vibration,
-                power_consumption: latestData.torque, // Mapped from torque in hook
-                joint_1_angle: latestData.jointAngle
+                temperature: latestData.temperature || 25,
+                vibration: latestData.vibration || 0,
+                power: latestData.power || 0,
+                velocity: latestData.velocity || 0,
+                torque: latestData.torque || 0
             };
             fetchSHAP(features);
         }
@@ -89,17 +131,8 @@ export function Dashboard() {
                     <h1 className="text-3xl font-bold tracking-tight">AI Predictive Health</h1>
                     <p className="text-muted-foreground mt-1">Real-time AI analysis & sensor telemetry from {selectedMachineId}</p>
                 </div>
-                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
-                    {/* Machine Type Selector */}
-                    <div className="min-w-[300px]">
-                        <MachineTypeSelector 
-                            selectedMachineType={selectedMachineType}
-                            onMachineTypeChange={setSelectedMachineType}
-                        />
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-blue-500/10 p-1 rounded-md border border-blue-500/20">
                             <Server className="h-4 w-4 ml-2 text-blue-500" />
                             {machines.length > 0 ? (
                                 <select
@@ -134,41 +167,39 @@ export function Dashboard() {
                         </button>
                     </div>
                 </div>
-            </div>
 
             {/* ML Predictions Panel - Promoted to Top */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <MetricCard
                     title="Anomaly Score"
-                    value={getLatestValue('anomaly_score')}
+                    value={getHealthValue('anomaly_score', 0).toFixed(3)}
                     unit=""
-                    status={Number(getLatestValue('anomaly_score')) > 0.7 ? 'warning' : 'neutral'}
+                    status={getHealthValue('anomaly_score', 0) > 0.7 ? 'warning' : 'neutral'}
                     className="border-blue-500/50 bg-blue-500/5"
                 />
                 <MetricCard
                     title="Failure Probability"
-                    value={(Number(getLatestValue('failure_probability')) * 100).toFixed(1)}
+                    value={(getHealthValue('failure_probability', 0) * 100).toFixed(1)}
                     unit="%"
-                    status={Number(getLatestValue('failure_probability')) > 0.5 ? 'error' : 'neutral'}
+                    status={getHealthValue('failure_probability', 0) > 0.5 ? 'error' : 'neutral'}
                     className="border-red-500/50 bg-red-500/5"
                 />
                 <MetricCard
                     title="Remaining Useful Life"
-                    value={getLatestValue('rul_hours')}
+                    value={getHealthValue('rul_hours', 0).toFixed(0)}
                     unit="hrs"
-                    status={Number(getLatestValue('rul_hours')) < 50 ? 'warning' : 'neutral'}
+                    status={getHealthValue('rul_hours', 1000) < 50 ? 'warning' : 'neutral'}
                     className="border-green-500/50 bg-green-500/5"
                 />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {Object.entries(machineConfig.sensors).map(([key, sensor], index) => (
+                {Object.entries(sensors).map(([key, sensor], index) => (
                     <MetricCard
                         key={key}
                         title={sensor.label}
                         value={getLatestValue(sensor.dataKey)}
                         unit={sensor.unit}
-                        icon={sensor.icon}
                         status={sensor.threshold && Number(getLatestValue(sensor.dataKey)) > sensor.threshold ? 'warning' : 'neutral'}
                     />
                 ))}
@@ -249,6 +280,11 @@ export function Dashboard() {
                         baseValue={Array.isArray(shap.base_value) ? shap.base_value[1] : shap.base_value}
                     />
                 )}
+            </div>
+            
+            {/* Analytics Section */}
+            <div className="mt-6">
+                <AnalyticsSection data={data} machineId={selectedMachineId} />
             </div>
         </div>
     );

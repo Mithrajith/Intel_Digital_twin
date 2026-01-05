@@ -15,7 +15,6 @@ import { Logs } from './pages/Logs';
 import { Alerts } from './pages/Alerts';
 import { ModelInfo } from './pages/ModelInfo';
 import { Settings } from './pages/Settings';
-import { ComprehensivePage } from './pages/ComprehensivePage';
 
 function App() {
   return (
@@ -29,7 +28,6 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/overview" element={<Overview />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/comprehensive" element={<ComprehensivePage />} />
               <Route path="/predictions" element={<Predictions />} />
               <Route path="/simulation" element={<Simulation />} />
               <Route path="/control" element={<ControlPanel />} />

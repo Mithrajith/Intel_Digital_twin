@@ -1,18 +1,18 @@
-// import React from 'react';
-// import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
-// import { Badge } from '../components/common/Badge';
-// import { MetricCard } from '../components/common/MetricCard';
-
 import React, { useState, useEffect } from 'react';
-import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { BrainCircuit, AlertTriangle, ShieldCheck, HelpCircle, BarChart3 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { MetricCard } from '../components/common/MetricCard';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
+import { useSHAPExplanation } from '../hooks/useSHAPExplanation';
+import { SHAPBarChart } from '../components/charts/SHAPBarChart';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
 
 export function Predictions() {
     const [healthData, setHealthData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { refreshRate } = useChartRefreshRate();
+    const sensorData = useSimulatedSensor(true, refreshRate, 'armpi_fpv_01');
+    const { shap, loading: shapLoading, error: shapError, fetchSHAP } = useSHAPExplanation();
 
     useEffect(() => {
         const fetchHealth = async () => {
@@ -21,6 +21,18 @@ export function Predictions() {
                 if (response.ok) {
                     const data = await response.json();
                     setHealthData(data);
+                    
+                    // Fetch SHAP explanations with latest sensor data
+                    if (sensorData.length > 0) {
+                        const latest = sensorData[sensorData.length - 1];
+                        fetchSHAP({
+                            temperature: latest.temperature || 25,
+                            vibration: latest.vibration || 0,
+                            power: latest.power || 0,
+                            velocity: latest.velocity || 0,
+                            torque: latest.torque || 0
+                        });
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch health data", error);
@@ -33,7 +45,7 @@ export function Predictions() {
         const interval = setInterval(fetchHealth, 2000); // Poll every 2 seconds
 
         return () => clearInterval(interval);
-    }, []);
+    }, [sensorData, fetchSHAP]);
 
     if (loading && !healthData) {
         return <div className="p-6 text-center text-muted-foreground">Loading prediction models...</div>;

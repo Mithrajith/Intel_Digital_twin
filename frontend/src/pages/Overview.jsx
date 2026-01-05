@@ -4,6 +4,7 @@ import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
 import { useSimulatedSensor } from '../hooks/useSimulatedSensor';
 import { useChartRefreshRate } from '../hooks/useChartRefreshRate.jsx';
+import { MaintenanceSchedulingUI } from '../components/maintenance/MaintenanceSchedulingUI';
 
 export function Overview() {
     const [state, setState] = useState(null);
@@ -35,12 +36,12 @@ export function Overview() {
         return () => clearInterval(interval);
     }, []);
 
-    // Derived values
     const healthScore = health ? Math.max(0, 100 - (health.anomaly_score * 50) - (health.failure_probability * 50)).toFixed(0) : 100;
     const runtimeHours = state ? (state.uptime_seconds / 3600).toFixed(1) : "0";
-    const loadPercent = state ? Math.min(100, Math.round(state.power_consumption / 10)).toFixed(0) : "0"; // Mock scale for now
+    const loadPercent = state ? Math.min(100, Math.round((state.vibration_level || 0) * 50)).toFixed(0) : "0";
     const vibration = state ? state.vibration_level.toFixed(3) : "0.000";
-    const temperature = state ? state.temperature_core.toFixed(1) : "0.0";
+    const temperature = state && state.joints && state.joints.length > 0 ? 
+        (state.joints.reduce((sum, joint) => sum + joint.temperature, 0) / state.joints.length).toFixed(1) : "0.0";
     const nextMaintenance = health ? Math.max(0, (health.rul_hours / 24)).toFixed(1) : "0";
     const predictedFailures = health ? (health.failure_probability > 0.5 ? 1 : 0) : 0;
 
@@ -164,6 +165,11 @@ export function Overview() {
                         </div>
                     )}
                 </div>
+            </div>
+            
+            {/* Maintenance Scheduling Section */}
+            <div className="mt-6">
+                <MaintenanceSchedulingUI machineId="robot_01" />
             </div>
         </div>
     );

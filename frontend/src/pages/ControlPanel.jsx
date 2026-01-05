@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Power, RotateCcw, AlertOctagon, Zap, ShieldAlert, Play, Pause } from 'lucide-react';
 import { AlertCard } from '../components/common/AlertCard';
+import { FailureModeInjection } from '../components/maintenance/FailureModeInjection';
 
 export function ControlPanel() {
     const [isRunning, setIsRunning] = useState(true);
@@ -201,6 +202,11 @@ export function ControlPanel() {
                     ))}
                 </div>
             )}
+            
+            {/* Failure Mode Injection Section */}
+            <div className="mt-6">
+                <FailureModeInjection machineId="robot_01" />
+            </div>
         </div>
     );
 }
